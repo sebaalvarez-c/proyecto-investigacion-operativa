@@ -3,23 +3,20 @@ import { createTrackingState, subscribeToAmbulance, type PositionUpdate } from '
 
 export function useAmbulanceTracking(ambulanceId?: string) {
   const [position, setPosition] = useState<PositionUpdate | null>(null);
-  const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | 'arrived'>('connecting');
+  const hasSupabaseConfig = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+  const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | 'arrived'>(hasSupabaseConfig ? 'connecting' : 'connected');
 
   useEffect(() => {
     if (!ambulanceId) return undefined;
     const state = createTrackingState();
-    const hasSupabaseConfig = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-    if (!hasSupabaseConfig) {
-      setConnection('connected');
-      return undefined;
-    }
+    if (!hasSupabaseConfig) return undefined;
     const cleanup = subscribeToAmbulance(ambulanceId, (update) => {
       state.accept(update);
       setPosition(state.position);
       setConnection(state.connection);
     });
     return () => { state.disconnect(); setConnection(state.connection); cleanup(); };
-  }, [ambulanceId]);
+  }, [ambulanceId, hasSupabaseConfig]);
 
   return { position, connection };
 }

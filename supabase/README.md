@@ -16,3 +16,9 @@ La PWA utiliza una sesión autenticada para lecturas de demostración. Las
 mutaciones de despacho y administración se reservan al backend con su secreto
 de servidor. Las coordenadas y hospitales del seed son datos simulados para la
 presentación académica.
+
+## Verificación pendiente
+
+La aplicación no debe declarar Supabase operativo hasta aplicar las migraciones
+en un proyecto real, ejecutar el seed y comprobar una lectura autenticada y una
+lectura anónima bloqueada por RLS. No se incluyen credenciales en este repositorio.
