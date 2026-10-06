@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ensureDemoSession } from '../../lib/supabase';
 import { createTrackingState, subscribeToAmbulance, type PositionUpdate } from '../../services/realtime';
 
 export function useAmbulanceTracking(ambulanceId?: string) {
@@ -10,12 +11,19 @@ export function useAmbulanceTracking(ambulanceId?: string) {
     if (!ambulanceId) return undefined;
     const state = createTrackingState();
     if (!hasSupabaseConfig) return undefined;
-    const cleanup = subscribeToAmbulance(ambulanceId, (update) => {
-      state.accept(update);
-      setPosition(state.position);
-      setConnection(state.connection);
+    let active = true;
+    let cleanup: (() => void) | undefined;
+    void ensureDemoSession().then(() => {
+      if (!active) return;
+      cleanup = subscribeToAmbulance(ambulanceId, (update) => {
+        state.accept(update);
+        setPosition(state.position);
+        setConnection(state.connection);
+      });
+    }).catch(() => {
+      if (active) setConnection('reconnecting');
     });
-    return () => { state.disconnect(); setConnection(state.connection); cleanup(); };
+    return () => { active = false; state.disconnect(); setConnection(state.connection); cleanup?.(); };
   }, [ambulanceId, hasSupabaseConfig]);
 
   return { position, connection };

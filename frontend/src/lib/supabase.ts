@@ -2,6 +2,13 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 let client: SupabaseClient | null = null;
 
+export interface DemoAuthClient {
+  auth: {
+    getSession: () => Promise<{ data: { session: unknown }; error: Error | null }>;
+    signInAnonymously: () => Promise<{ error: Error | null }>;
+  };
+}
+
 export function getSupabaseClient(): SupabaseClient {
   if (client) return client;
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -13,8 +20,14 @@ export function getSupabaseClient(): SupabaseClient {
   return client;
 }
 
+export async function ensureAuthenticatedSession(supabase: DemoAuthClient): Promise<void> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw new Error(`No se pudo consultar la sesión Supabase: ${error.message}`);
+  if (data.session) return;
+  const result = await supabase.auth.signInAnonymously();
+  if (result.error) throw new Error(`No se pudo crear la sesión Supabase: ${result.error.message}`);
+}
+
 export async function ensureDemoSession(): Promise<void> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase.auth.getSession();
-  if (error) throw new Error(`No se pudo abrir la sesión Supabase: ${error.message}`);
+  await ensureAuthenticatedSession(getSupabaseClient());
 }
