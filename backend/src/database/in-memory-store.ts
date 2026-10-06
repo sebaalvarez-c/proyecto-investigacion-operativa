@@ -43,7 +43,8 @@ export interface RouteRecord {
   distanceMeters: number;
   estimatedMinutes: number;
   hasBlockage: boolean;
-  alternativeRoute?: { distanceMeters: number; estimatedMinutes: number; reason: string };
+  alternativeRoute?: { distanceMeters: number; estimatedMinutes: number; reason: string; polyline?: string; label?: string };
+  alternatives: Array<{ distanceMeters: number; estimatedMinutes: number; polyline?: string; label?: string }>;
   status: 'PRIMARY' | 'ALTERNATIVE' | 'COMPLETED';
 }
 

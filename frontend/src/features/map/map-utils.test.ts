@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { interpolatePoint, locationFromGeolocation, getViewportPoints, type GeoPoint } from './map-utils';
+import { decodeEncodedPolyline, interpolatePoint, locationFromGeolocation, getViewportPoints, type GeoPoint } from './map-utils';
 
 describe('map utilities', () => {
   it('interpolates the ambulance position along the selected route', () => {
@@ -19,5 +19,13 @@ describe('map utilities', () => {
     expect(points).toHaveLength(4);
     expect(points[0]).toEqual({ latitude: -17.79, longitude: -63.18 });
     expect(points[3]).toEqual({ latitude: -17.7617, longitude: -63.1656 });
+  });
+
+  it('decodes a Google encoded polyline into map coordinates', () => {
+    expect(decodeEncodedPolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@')).toEqual([
+      { latitude: 38.5, longitude: -120.2 },
+      { latitude: 40.7, longitude: -120.95 },
+      { latitude: 43.252, longitude: -126.453 },
+    ]);
   });
 });

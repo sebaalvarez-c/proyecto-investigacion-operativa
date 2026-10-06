@@ -33,8 +33,9 @@ export interface RouteView {
   distanceMeters: number;
   estimatedMinutes: number;
   hasBlockage: boolean;
-  primary: { distanceMeters: number; estimatedMinutes: number };
-  alternative?: { distanceMeters: number; estimatedMinutes: number; reason: string };
+  primary: { distanceMeters: number; estimatedMinutes: number; polyline?: string; label?: string };
+  alternative?: { distanceMeters: number; estimatedMinutes: number; reason: string; polyline?: string; label?: string };
+  alternatives?: Array<{ distanceMeters: number; estimatedMinutes: number; polyline?: string; label?: string }>;
 }
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');

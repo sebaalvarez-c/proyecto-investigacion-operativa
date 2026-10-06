@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { RouteRepository } from '../../database/in-memory.repositories.js';
 import { EmergencyRepository, AmbulanceRepository, HospitalRepository } from '../../database/in-memory.repositories.js';
 import { InMemoryStore } from '../../database/in-memory-store.js';
-import { DeterministicRouteProvider } from './route-provider.js';
+import { DeterministicRouteProvider, GoogleRoutesProvider } from './route-provider.js';
 
 @Injectable()
 export class RoutesService {
@@ -13,6 +13,7 @@ export class RoutesService {
     private readonly routes: RouteRepository,
     private readonly store: InMemoryStore,
     private readonly provider: DeterministicRouteProvider,
+    private readonly googleRoutes: GoogleRoutesProvider,
   ) {}
 
   async createForEmergency(id: string, hasBlockage = false) {
@@ -24,8 +25,12 @@ export class RoutesService {
     const hospital = this.hospitals.findById(emergency.assignedHospitalId);
     if (!ambulance || !hospital) throw new NotFoundException('Assigned resources not found');
 
-    const primary = await this.provider.getRoute(ambulance, hospital);
-    const alternative = hasBlockage ? await this.provider.getRoute(ambulance, hospital, { avoidBlockage: true }) : undefined;
+    const googleRoute = await this.googleRoutes.getRoutes(ambulance, hospital).catch(() => null);
+    const fallbackPrimary = await this.provider.getRoute(ambulance, hospital);
+    const primary = googleRoute?.primary ?? fallbackPrimary;
+    const fallbackAlternative = hasBlockage ? await this.provider.getRoute(ambulance, hospital, { avoidBlockage: true }) : undefined;
+    const alternatives = googleRoute?.alternatives ?? (fallbackAlternative ? [{ ...fallbackAlternative, label: 'Alternativa por bloqueo' }] : []);
+    const alternative = alternatives[0];
     const route = this.routes.save({
       id: this.store.newId(),
       emergencyId: id,
@@ -34,10 +39,11 @@ export class RoutesService {
       distanceMeters: primary.distanceMeters,
       estimatedMinutes: primary.estimatedMinutes,
       hasBlockage,
-      alternativeRoute: alternative ? { ...alternative, reason: 'Bloqueo detectado en la ruta principal' } : undefined,
+      alternativeRoute: alternative ? { ...alternative, reason: hasBlockage ? 'Bloqueo detectado en la ruta principal' : 'Alternativa por calle' } : undefined,
+      alternatives,
       status: 'PRIMARY',
     });
 
-    return { ...route, primary, alternative: route.alternativeRoute };
+    return { ...route, primary, alternative: route.alternativeRoute, alternatives };
   }
 }
