@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module.js';
+import { configureApp } from './../src/app.config.js';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -13,6 +14,7 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    configureApp(app);
     await app.init();
   });
 
@@ -21,6 +23,13 @@ describe('AppController (e2e)', () => {
       .get('/')
       .expect(200)
       .expect('Hello World!');
+  });
+
+  it('allows the PWA origin to call the API', async () => {
+    await request(app.getHttpServer())
+      .get('/')
+      .set('Origin', 'http://localhost:5173')
+      .expect('Access-Control-Allow-Origin', 'http://localhost:5173');
   });
 
   afterEach(async () => {
