@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 describe('ambulance dispatch workflow', () => {
   afterEach(() => {
+    cleanup();
     vi.unstubAllGlobals();
   });
 
@@ -39,5 +40,19 @@ describe('ambulance dispatch workflow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /simular llegada/i }));
     await waitFor(() => expect(screen.getByText('Llegó al hospital')).toBeInTheDocument());
+  });
+
+  it('uses the browser location when the user requests it', async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } });
+
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /usar mi ubicación/i }));
+
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+    const success = getCurrentPosition.mock.calls[0][0] as (position: { coords: { latitude: number; longitude: number } }) => void;
+    success({ coords: { latitude: -17.765, longitude: -63.178 } });
+
+    expect(await screen.findByText(/-17\.765, -63\.178/)).toBeInTheDocument();
   });
 });
