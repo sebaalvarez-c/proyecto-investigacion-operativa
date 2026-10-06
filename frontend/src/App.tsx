@@ -1,122 +1,42 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { EmergencyForm } from './features/emergency/EmergencyForm';
+import { MapPanel } from './features/map/MapPanel';
+import { TrackingStatus } from './features/tracking/TrackingStatus';
+import { TransportMatrixCard } from './features/transport-matrix/TransportMatrixCard';
+import { createEmergency, getRoute, optimizeEmergency, type RouteView, type TransportSolutionView } from './services/api';
+import './App.css';
+
+const incidentLocation = { latitude: -17.7804, longitude: -63.1745 };
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [solution, setSolution] = useState<TransportSolutionView | null>(null);
+  const [route, setRoute] = useState<RouteView | null>(null);
+  const [arrived, setArrived] = useState(false);
+
+  async function handleEmergency(description: string) {
+    setLoading(true); setError(null); setArrived(false);
+    try {
+      const emergency = await createEmergency({ description, ...incidentLocation });
+      const nextSolution = await optimizeEmergency(emergency.id);
+      setSolution(nextSolution);
+      setRoute(await getRoute(emergency.id));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo procesar el accidente.');
+    } finally { setLoading(false); }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <div className="app-shell">
+      <header className="topbar"><a className="brand" href="/" aria-label="Ambulance Transport inicio"><span className="brand-mark">✚</span><span>AMBULANCE<span>TRANSPORT</span></span></a><div className="header-meta"><span className="live-pill"><i /> Simulación activa</span><span className="location-pill">Santa Cruz, BO</span></div></header>
+      <main>
+        <section className="hero-copy"><div><p className="eyebrow">Centro de despacho · Investigación operativa</p><h1>La ruta más rápida<br /><em>cuando cada minuto importa.</em></h1><p className="hero-lede">Simula un despacho de ambulancia, compara alternativas con el método de transporte y sigue la unidad hasta el hospital.</p></div><div className="hero-stat"><strong>01</strong><span>escenario<br />académico</span></div></section>
+        <div className="workflow-grid"><div className="left-column"><EmergencyForm loading={loading} onSubmit={handleEmergency} />{error && <div className="error-banner" role="alert"><strong>No se pudo completar</strong><span>{error}</span></div>}{solution && <TransportMatrixCard solution={solution} />}</div><div className="right-column">{route ? <MapPanel route={route} arrived={arrived} /> : <section className="card map-card map-empty"><div className="empty-map-icon">⌁</div><h2>Mapa de despacho</h2><p>Reporta un accidente para calcular la asignación y visualizar la ruta.</p><div className="map-empty-grid" /></section>}{route && <TrackingStatus arrived={arrived} onArrive={() => setArrived(true)} />}</div></div>
+      </main>
+      <footer><span>Proyecto de Investigación Operativa</span><span>Método de transporte · PWA demostrativa</span></footer>
+    </div>
+  );
 }
 
-export default App
+export default App;

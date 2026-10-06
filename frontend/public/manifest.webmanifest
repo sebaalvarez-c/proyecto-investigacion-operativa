@@ -1,0 +1,10 @@
+{
+  "name": "Ambulance Transport",
+  "short_name": "Ambulance Transport",
+  "description": "Simulador académico del método de transporte para despacho de ambulancias.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8f9",
+  "theme_color": "#0c9e94",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
