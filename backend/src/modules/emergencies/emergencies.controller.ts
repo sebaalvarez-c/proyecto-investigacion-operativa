@@ -17,6 +17,17 @@ export class EmergenciesController {
     return this.emergencies.optimize(id, availability === 'none');
   }
 
+  @Get(':id/ambulance-options')
+  options(@Param('id') id: string) { return this.emergencies.options(id); }
+
+  @Post(':id/dispatch')
+  dispatch(@Param('id') id: string, @Body() body: { ambulanceId?: string }) {
+    return this.emergencies.dispatch(id, body?.ambulanceId);
+  }
+
+  @Post(':id/complete')
+  complete(@Param('id') id: string) { return this.emergencies.complete(id); }
+
   @Post(':id/route')
   route(@Param('id') id: string, @Query('blockage') blockage?: string) {
     return this.routes.createForEmergency(id, blockage === 'true');

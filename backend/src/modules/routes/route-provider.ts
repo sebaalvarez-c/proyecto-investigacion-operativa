@@ -40,6 +40,25 @@ export class GoogleRoutesProvider {
 }
 
 @Injectable()
+export class OpenStreetMapRoutesProvider {
+  async getRoutes(origin: Coordinate, destination: Coordinate): Promise<{ primary: RouteResult; alternatives: RouteResult[] } | null> {
+    const start = `${origin.longitude},${origin.latitude}`;
+    const end = `${destination.longitude},${destination.latitude}`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?alternatives=true&overview=full&geometries=polyline`;
+    const response = await fetch(url, { headers: { 'User-Agent': 'AmbulanceTransportAcademicPWA/1.0' } }).catch(() => null);
+    if (!response?.ok) return null;
+    const body = await response.json() as { routes?: Array<{ distance?: number; duration?: number; geometry?: string }> };
+    const routes = (body.routes ?? []).map((route): RouteOption => ({
+      distanceMeters: route.distance ?? 0,
+      estimatedMinutes: Math.max(0.1, Math.round(((route.duration ?? 0) / 60) * 10) / 10),
+      polyline: route.geometry,
+      label: 'Ruta por OpenStreetMap',
+    })).filter((route) => route.distanceMeters > 0 && route.polyline);
+    return routes.length ? chooseRecommendedRoute(routes) : null;
+  }
+}
+
+@Injectable()
 export class DeterministicRouteProvider implements RouteProvider {
   async getRoute(origin: Coordinate, destination: Coordinate, options: { avoidBlockage?: boolean } = {}): Promise<RouteResult> {
     const latitudeDistance = (destination.latitude - origin.latitude) * 111_000;

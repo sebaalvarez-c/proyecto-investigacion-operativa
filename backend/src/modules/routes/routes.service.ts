@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import type { Coordinate } from '../../database/in-memory-store.js';
 import { RouteRepository } from '../../database/in-memory.repositories.js';
 import { EmergencyRepository, AmbulanceRepository, HospitalRepository } from '../../database/in-memory.repositories.js';
 import { InMemoryStore } from '../../database/in-memory-store.js';
-import { DeterministicRouteProvider, GoogleRoutesProvider } from './route-provider.js';
+import { DeterministicRouteProvider, GoogleRoutesProvider, OpenStreetMapRoutesProvider } from './route-provider.js';
 
 @Injectable()
 export class RoutesService {
@@ -14,7 +15,15 @@ export class RoutesService {
     private readonly store: InMemoryStore,
     private readonly provider: DeterministicRouteProvider,
     private readonly googleRoutes: GoogleRoutesProvider,
+    private readonly openStreetMapRoutes: OpenStreetMapRoutesProvider,
   ) {}
+
+  async streetRoute(origin: Coordinate, destination: Coordinate) {
+    const google = await this.googleRoutes.getRoutes(origin, destination).catch(() => null);
+    const result = google ?? await this.openStreetMapRoutes.getRoutes(origin, destination).catch(() => null);
+    if (!result?.primary.polyline) throw new ServiceUnavailableException('No se pudo calcular una ruta por calles. Intenta nuevamente.');
+    return { origin: { latitude: origin.latitude, longitude: origin.longitude }, destination: { latitude: destination.latitude, longitude: destination.longitude }, ...result };
+  }
 
   async createForEmergency(id: string, hasBlockage = false) {
     const emergency = this.emergencies.findById(id);
@@ -26,10 +35,11 @@ export class RoutesService {
     if (!ambulance || !hospital) throw new NotFoundException('Assigned resources not found');
 
     const googleRoute = await this.googleRoutes.getRoutes(ambulance, hospital).catch(() => null);
+    const streetRoute = googleRoute ?? await this.openStreetMapRoutes.getRoutes(ambulance, hospital);
     const fallbackPrimary = await this.provider.getRoute(ambulance, hospital);
-    const primary = googleRoute?.primary ?? fallbackPrimary;
+    const primary = streetRoute?.primary ?? fallbackPrimary;
     const fallbackAlternative = hasBlockage ? await this.provider.getRoute(ambulance, hospital, { avoidBlockage: true }) : undefined;
-    const alternatives = googleRoute?.alternatives ?? (fallbackAlternative ? [{ ...fallbackAlternative, label: 'Alternativa por bloqueo' }] : []);
+    const alternatives = streetRoute?.alternatives ?? (fallbackAlternative ? [{ ...fallbackAlternative, label: 'Alternativa por bloqueo' }] : []);
     const alternative = alternatives[0];
     const route = this.routes.save({
       id: this.store.newId(),

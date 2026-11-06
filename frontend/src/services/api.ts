@@ -38,6 +38,11 @@ export interface RouteView {
   alternatives?: Array<{ distanceMeters: number; estimatedMinutes: number; polyline?: string; label?: string }>;
 }
 
+export interface Hospital { id: string; name: string; latitude: number; longitude: number }
+export interface AmbulanceOption { id: string; code: string; hospital: Hospital; distanceMeters: number; estimatedMinutes: number; priceBs: number }
+export interface StreetRoute { origin: { latitude: number; longitude: number }; destination: { latitude: number; longitude: number }; primary: { distanceMeters: number; estimatedMinutes: number; polyline?: string }; alternatives: Array<{ distanceMeters: number; estimatedMinutes: number; polyline?: string }> }
+export interface Dispatch { ambulance: { id: string; code: string }; base: Hospital; hospital: Hospital; priceBs: number; pickup: StreetRoute; transfer: StreetRoute; solution: TransportSolutionView }
+
 const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -60,3 +65,8 @@ export function optimizeEmergency(id: string): Promise<TransportSolutionView> {
 export function getRoute(id: string): Promise<RouteView> {
   return request<RouteView>(`/emergencies/${id}/route?blockage=true`, { method: 'POST' });
 }
+
+export function getHospitals(): Promise<Hospital[]> { return request<Hospital[]>('/hospitals?emergency=true'); }
+export function getAmbulanceOptions(id: string): Promise<AmbulanceOption[]> { return request<AmbulanceOption[]>(`/emergencies/${id}/ambulance-options`); }
+export function chooseAmbulance(id: string, ambulanceId: string): Promise<Dispatch> { return request<Dispatch>(`/emergencies/${id}/dispatch`, { method: 'POST', body: JSON.stringify({ ambulanceId }) }); }
+export function completeDispatch(id: string): Promise<{ status: string }> { return request<{ status: string }>(`/emergencies/${id}/complete`, { method: 'POST' }); }
