@@ -19,7 +19,14 @@ describe('AppController', () => {
 
     configureApp({ enableCors, useGlobalPipes: vi.fn() } as never);
 
-    expect(enableCors).toHaveBeenCalledWith(expect.objectContaining({ origin: ['https://ambulance.example', 'https://www.ambulance.example'] }));
+    const corsOptions = enableCors.mock.calls[0][0] as { origin: (origin: string, callback: (error: Error | null, allow?: boolean) => void) => void };
+    const allowedCallback = vi.fn();
+    corsOptions.origin('https://ambulance.example', allowedCallback);
+    expect(allowedCallback).toHaveBeenCalledWith(null, true);
+
+    const deniedCallback = vi.fn();
+    corsOptions.origin('https://unknown.example', deniedCallback);
+    expect(deniedCallback).toHaveBeenCalledWith(expect.any(Error), false);
     if (previous.node === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous.node;
     if (previous.origins === undefined) delete process.env.CORS_ORIGINS; else process.env.CORS_ORIGINS = previous.origins;
   });
