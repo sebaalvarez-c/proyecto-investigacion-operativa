@@ -15,6 +15,7 @@ export class GoogleRoutesProvider {
     if (!apiKey) return null;
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
+      signal: AbortSignal.timeout(4500),
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
@@ -44,8 +45,9 @@ export class OpenStreetMapRoutesProvider {
   async getRoutes(origin: Coordinate, destination: Coordinate): Promise<{ primary: RouteResult; alternatives: RouteResult[] } | null> {
     const start = `${origin.longitude},${origin.latitude}`;
     const end = `${destination.longitude},${destination.latitude}`;
-    const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?alternatives=true&overview=full&geometries=polyline`;
-    const response = await fetch(url, { headers: { 'User-Agent': 'AmbulanceTransportAcademicPWA/1.0' } }).catch(() => null);
+    const baseUrl = (process.env.OSRM_BASE_URL ?? 'https://router.project-osrm.org').replace(/\/$/, '');
+    const url = `${baseUrl}/route/v1/driving/${start};${end}?alternatives=true&overview=full&geometries=polyline`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(4500), headers: { 'User-Agent': 'AmbulanceTransportAcademicPWA/1.0' } }).catch(() => null);
     if (!response?.ok) return null;
     const body = await response.json() as { routes?: Array<{ distance?: number; duration?: number; geometry?: string }> };
     const routes = (body.routes ?? []).map((route): RouteOption => ({

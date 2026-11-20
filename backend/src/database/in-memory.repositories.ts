@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InMemoryStore } from './in-memory-store.js';
-import type { AmbulanceStatus, EmergencyRecord, HospitalRecord, RouteRecord, TransportSolutionRecord } from './in-memory-store.js';
+import type { AmbulanceStatus, DispatchEventRecord, DispatchEventType, EmergencyRecord, HospitalRecord, RouteRecord, TransportSolutionRecord } from './in-memory-store.js';
 
 @Injectable()
 export class EmergencyRepository {
@@ -10,6 +10,7 @@ export class EmergencyRepository {
     const now = new Date().toISOString();
     const record: EmergencyRecord = { ...input, id: this.store.newId(), status: 'PENDING', assignedAmbulanceId: null, assignedHospitalId: null, createdAt: now, updatedAt: now };
     this.store.emergencies.push(record);
+    void this.store.persistEmergency(record);
     return record;
   }
 
@@ -21,6 +22,7 @@ export class EmergencyRepository {
     const record = this.findById(id);
     if (!record) return undefined;
     Object.assign(record, patch, { updatedAt: new Date().toISOString() });
+    void this.store.persistEmergency(record);
     return record;
   }
 }
@@ -40,6 +42,7 @@ export class AmbulanceRepository {
   updateStatus(id: string, status: AmbulanceStatus) {
     const ambulance = this.findById(id);
     if (ambulance) ambulance.status = status;
+    if (ambulance) void this.store.persistAmbulance(ambulance);
     return ambulance;
   }
 }
@@ -63,6 +66,7 @@ export class RouteRepository {
 
   save(route: RouteRecord): RouteRecord {
     this.store.routes.push(route);
+    void this.store.persistRoute(route);
     return route;
   }
 }
@@ -73,6 +77,23 @@ export class TransportSolutionRepository {
 
   save(solution: TransportSolutionRecord): TransportSolutionRecord {
     this.store.transportSolutions.push(solution);
+    void this.store.persistSolution(solution);
     return solution;
+  }
+}
+
+@Injectable()
+export class DispatchEventRepository {
+  constructor(private readonly store: InMemoryStore) {}
+
+  append(emergencyId: string, eventType: DispatchEventType, payload: Record<string, unknown> = {}): DispatchEventRecord {
+    const event = { id: this.store.newId(), emergencyId, eventType, payload, occurredAt: new Date().toISOString() };
+    this.store.dispatchEvents.push(event);
+    void this.store.persistEvent(event);
+    return event;
+  }
+
+  list(emergencyId: string): DispatchEventRecord[] {
+    return this.store.dispatchEvents.filter((event) => event.emergencyId === emergencyId);
   }
 }

@@ -3,7 +3,10 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
-vi.mock('./features/map/MapPanel', () => ({ MapPanel: () => <div>Mapa de calles</div> }));
+vi.mock('./features/map/MapPanel', () => ({
+  MapPanel: ({ onPick }: { onPick?: (point: { latitude: number; longitude: number }) => void }) =>
+    <button type="button" onClick={() => onPick?.({ latitude: -17.812, longitude: -63.161 })}>Punto del mapa</button>,
+}));
 
 describe('ambulance dispatch workflow', () => {
   afterEach(() => {
@@ -40,9 +43,11 @@ describe('ambulance dispatch workflow', () => {
 
     expect(await screen.findByText('Más cercana')).toBeInTheDocument();
     expect(screen.getByText('Más económica')).toBeInTheDocument();
+    expect(screen.getByText('Tarifa académica estimada · no es un cobro real')).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: /elegir ambulancia/i })[1]);
-    expect(await screen.findByText('Destino recomendado')).toBeInTheDocument();
-    expect(screen.getByText(/AMB-02 · Bs 70.00/)).toBeInTheDocument();
+    expect(await screen.findByText(/AMB-02 · Bs 70.00/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Matriz' }));
+    expect(screen.getByText('Destino recomendado')).toBeVisible();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/dispatch'), expect.objectContaining({ body: JSON.stringify({ ambulanceId: 'a2' }) })));
   });
 
@@ -58,5 +63,61 @@ describe('ambulance dispatch workflow', () => {
     success({ coords: { latitude: -17.765, longitude: -63.178 } });
 
     expect(await screen.findByText(/-17\.765, -63\.178/)).toBeInTheDocument();
+  });
+
+  it('sends the selected map coordinates when creating an emergency', async () => {
+    const fetchMock = vi.fn((url: string) => Promise.resolve(new Response(
+      url.endsWith('/emergencies') ? JSON.stringify({ id: 'e1' }) : '[]',
+    )));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Punto del mapa' }));
+    expect(screen.getByText('Ubicación elegida en el mapa')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /simular accidente/i }));
+    await screen.findByText(/no hay ambulancias disponibles/i);
+    const creation = fetchMock.mock.calls.find(([url]) => url.endsWith('/emergencies')) as unknown as [string, RequestInit];
+    expect(JSON.parse(String(creation[1].body))).toMatchObject({ latitude: -17.812, longitude: -63.161 });
+  });
+
+  it('shows every available ambulance in the desktop panel', async () => {
+    const hospital = { id: 'h1', name: 'Hospital Japonés', latitude: -17.76, longitude: -63.16 };
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/hospitals')) return Promise.resolve(new Response(JSON.stringify([hospital])));
+      if (url.endsWith('/emergencies')) return Promise.resolve(new Response(JSON.stringify({ id: 'e1' }), { status: 201 }));
+      if (url.includes('/ambulance-options')) return Promise.resolve(new Response(JSON.stringify(
+        [1, 2, 3, 4].map((n) => ({ id: `a${n}`, code: `AMB-0${n}`, hospital, distanceMeters: n * 1000, estimatedMinutes: n, priceBs: n * 50 })),
+      )));
+      return Promise.resolve(new Response('{}'));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /simular accidente/i }));
+
+    expect(await screen.findByText('AMB-01')).toBeInTheDocument();
+    expect(screen.getByText('AMB-02')).toBeInTheDocument();
+    expect(screen.getByText('AMB-03')).toBeInTheDocument();
+    expect(screen.getByText('AMB-04')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument();
+  });
+
+  it('explains the dispatch flow and exposes the current phase', () => {
+    render(<App />);
+
+    expect(screen.getByText('Ubica el incidente')).toBeInTheDocument();
+    expect(screen.getByText('Compara ambulancias')).toBeInTheDocument();
+    expect(screen.getByText('Sigue el traslado')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Listo para buscar ambulancias');
+  });
+
+  it('translates network failures into a useful Spanish message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /simular accidente/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo conectar con el servidor');
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Failed to fetch');
   });
 });

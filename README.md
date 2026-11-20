@@ -24,11 +24,26 @@ La PWA queda disponible en Vite y la API en `http://localhost:3000`.
 
 1. Crear un proyecto Supabase propio.
 2. Copiar las variables de `.env.example` sin subir sus valores.
-3. Ejecutar en el SQL Editor, en orden, `supabase/migrations/001_initial_schema.sql`, `supabase/migrations/002_rls_policies.sql` y `supabase/seed.sql`.
+3. Ejecutar en el SQL Editor, en orden, las migraciones `001_initial_schema.sql`, `002_rls_policies.sql`, `003_demo_fares.sql`, `004_dispatch_events.sql` y luego `supabase/seed.sql`.
 4. Revisar las políticas RLS y habilitar el método de autenticación de demostración.
 
 Mientras no existan credenciales Supabase, el backend usa un adaptador en memoria
-determinista para desarrollo y pruebas; esa configuración no es persistente.
+determinista para desarrollo y pruebas; esa configuración no es persistente y no
+debe utilizarse como fuente de datos para una publicación operativa.
+
+## Producción académica
+
+La configuración objetivo es frontend en Vercel, API NestJS en Render y
+Supabase como PostgreSQL/Auth. Antes de habilitar tráfico público se debe
+activar el adaptador persistente de Supabase y definir `NODE_ENV=production`,
+`DATABASE_MODE=supabase` y `CORS_ORIGINS` con el dominio exacto de Vercel.
+Usa `MAP_PROVIDER=osrm` y `OSRM_BASE_URL` según el
+proveedor de rutas contratado. Nunca publiques `.env`, `SUPABASE_SERVICE_ROLE_KEY`
+ni claves sin restricciones.
+
+El endpoint `GET /health` se utiliza como health check del backend. Las tarifas,
+camas y disponibilidad del seed son datos académicos y no representan precios ni
+capacidad médica real.
 
 ## Pruebas y build
 

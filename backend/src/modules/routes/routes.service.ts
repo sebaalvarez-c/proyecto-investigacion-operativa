@@ -18,11 +18,20 @@ export class RoutesService {
     private readonly openStreetMapRoutes: OpenStreetMapRoutesProvider,
   ) {}
 
+  private async providerRoutes(origin: Coordinate, destination: Coordinate) {
+    const configured = process.env.MAP_PROVIDER ?? 'osrm';
+    if (configured === 'google') return this.googleRoutes.getRoutes(origin, destination).catch(() => null);
+    if (configured === 'hybrid') {
+      const google = await this.googleRoutes.getRoutes(origin, destination).catch(() => null);
+      return google ?? this.openStreetMapRoutes.getRoutes(origin, destination).catch(() => null);
+    }
+    return this.openStreetMapRoutes.getRoutes(origin, destination).catch(() => null);
+  }
+
   async streetRoute(origin: Coordinate, destination: Coordinate) {
-    const google = await this.googleRoutes.getRoutes(origin, destination).catch(() => null);
-    const result = google ?? await this.openStreetMapRoutes.getRoutes(origin, destination).catch(() => null);
+    const result = await this.providerRoutes(origin, destination);
     if (!result?.primary.polyline) throw new ServiceUnavailableException('No se pudo calcular una ruta por calles. Intenta nuevamente.');
-    return { origin: { latitude: origin.latitude, longitude: origin.longitude }, destination: { latitude: destination.latitude, longitude: destination.longitude }, ...result };
+    return { origin: { latitude: origin.latitude, longitude: origin.longitude }, destination: { latitude: destination.latitude, longitude: destination.longitude }, ...result, source: process.env.MAP_PROVIDER === 'google' ? 'Google Routes' : 'OSRM' };
   }
 
   async createForEmergency(id: string, hasBlockage = false) {
@@ -34,8 +43,7 @@ export class RoutesService {
     const hospital = this.hospitals.findById(emergency.assignedHospitalId);
     if (!ambulance || !hospital) throw new NotFoundException('Assigned resources not found');
 
-    const googleRoute = await this.googleRoutes.getRoutes(ambulance, hospital).catch(() => null);
-    const streetRoute = googleRoute ?? await this.openStreetMapRoutes.getRoutes(ambulance, hospital);
+    const streetRoute = await this.providerRoutes(ambulance, hospital);
     const fallbackPrimary = await this.provider.getRoute(ambulance, hospital);
     const primary = streetRoute?.primary ?? fallbackPrimary;
     const fallbackAlternative = hasBlockage ? await this.provider.getRoute(ambulance, hospital, { avoidBlockage: true }) : undefined;

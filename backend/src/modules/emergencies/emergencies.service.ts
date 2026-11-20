@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { solveByMinimumCost } from '../transport-method/application/transport-solver.js';
 import type { TransportProblem } from '../transport-method/domain/transport.types.js';
-import { AmbulanceRepository, EmergencyRepository, HospitalRepository, TransportSolutionRepository } from '../../database/in-memory.repositories.js';
+import { AmbulanceRepository, DispatchEventRepository, EmergencyRepository, HospitalRepository, TransportSolutionRepository } from '../../database/in-memory.repositories.js';
 import { InMemoryStore } from '../../database/in-memory-store.js';
 import { DeterministicRouteProvider } from '../routes/route-provider.js';
 import type { CreateEmergencyDto } from './dto/create-emergency.dto.js';
@@ -18,10 +18,13 @@ export class EmergenciesService {
     private readonly store: InMemoryStore,
     private readonly routeProvider: DeterministicRouteProvider,
     private readonly routesService: RoutesService,
+    private readonly events: DispatchEventRepository,
   ) {}
 
   create(input: CreateEmergencyDto) {
-    return this.emergencies.create(input);
+    const emergency = this.emergencies.create(input);
+    this.events.append(emergency.id, 'CREATED', { latitude: input.latitude, longitude: input.longitude });
+    return emergency;
   }
 
   get(id: string) {
@@ -37,7 +40,9 @@ export class EmergenciesService {
       const route = await this.routesService.streetRoute(ambulance, emergency);
       return { id: ambulance.id, code: ambulance.code, hospital: this.hospitals.findById(ambulance.currentHospitalId!)!, distanceMeters: route.primary.distanceMeters, estimatedMinutes: route.primary.estimatedMinutes, priceBs: Math.round((ambulance.baseFare + ambulance.farePerKm * route.primary.distanceMeters / 1000) * 100) / 100 };
     }));
-    return options.filter((option) => option.distanceMeters <= 30000).sort((a, b) => a.estimatedMinutes - b.estimatedMinutes || a.distanceMeters - b.distanceMeters);
+    const available = options.filter((option) => option.distanceMeters <= 30000).sort((a, b) => a.estimatedMinutes - b.estimatedMinutes || a.distanceMeters - b.distanceMeters);
+    this.events.append(id, 'OPTIONS_FOUND', { count: available.length });
+    return available;
   }
 
   private async buildDispatch(id: string, ambulanceId: string) {
@@ -48,10 +53,12 @@ export class EmergenciesService {
     if (!base) throw new NotFoundException('No se encontró el hospital de origen.');
     const hospitals = this.hospitals.list(true);
     if (!hospitals.length) throw new ConflictException('No hay hospitales disponibles.');
-    const [pickup, destinations] = await Promise.all([
+    const [pickup, destinationResults] = await Promise.all([
       this.routesService.streetRoute(ambulance, emergency),
-      Promise.all(hospitals.map(async (hospital) => ({ hospital, route: await this.routesService.streetRoute(emergency, hospital) }))),
+      Promise.allSettled(hospitals.map(async (hospital) => ({ hospital, route: await this.routesService.streetRoute(emergency, hospital) }))),
     ]);
+    const destinations = destinationResults.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+    if (!destinations.length) throw new ConflictException('No se encontró una ruta por calles a un hospital receptor.');
     if (pickup.primary.distanceMeters > 30000) throw new ConflictException('La ambulancia está fuera del área de búsqueda.');
     if (ambulance.status !== 'AVAILABLE' || emergency.assignedAmbulanceId) throw new ConflictException('La disponibilidad cambió. Vuelve a buscar.');
     destinations.sort((a, b) => a.route.primary.estimatedMinutes - b.route.primary.estimatedMinutes);
@@ -63,6 +70,7 @@ export class EmergenciesService {
     this.emergencies.update(id, { status: 'DISPATCHED', assignedAmbulanceId: ambulance.id, assignedHospitalId: best.hospital.id });
     this.ambulances.updateStatus(ambulance.id, 'DISPATCHED');
     this.solutions.save({ id: this.store.newId(), emergencyId: id, method: 'MINIMUM_COST', initialMatrix: problem, finalAssignment: solved, totalCostMinutes: solved.totalCost });
+    this.events.append(id, 'ASSIGNED', { ambulanceId: ambulance.id, hospitalId: best.hospital.id });
     return { ambulance: { id: ambulance.id, code: ambulance.code }, base, hospital: best.hospital, priceBs: Math.round((ambulance.baseFare + ambulance.farePerKm * pickup.primary.distanceMeters / 1000) * 100) / 100, pickup, transfer: best.route, solution };
   }
 
@@ -84,6 +92,7 @@ export class EmergenciesService {
     if (emergency.status !== 'ARRIVED') {
       this.ambulances.updateStatus(emergency.assignedAmbulanceId, 'AVAILABLE');
       this.emergencies.update(id, { status: 'ARRIVED' });
+      this.events.append(id, 'ARRIVED_AT_HOSPITAL', { hospitalId: emergency.assignedHospitalId });
     }
     return { status: 'ARRIVED' };
   }

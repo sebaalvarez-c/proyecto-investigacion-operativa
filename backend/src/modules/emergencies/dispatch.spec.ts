@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { InMemoryStore } from '../../database/in-memory-store.js';
-import { AmbulanceRepository, EmergencyRepository, HospitalRepository, TransportSolutionRepository } from '../../database/in-memory.repositories.js';
+import { AmbulanceRepository, DispatchEventRepository, EmergencyRepository, HospitalRepository, TransportSolutionRepository } from '../../database/in-memory.repositories.js';
 import { DeterministicRouteProvider } from '../routes/route-provider.js';
 import type { RoutesService } from '../routes/routes.service.js';
 import { EmergenciesService } from './emergencies.service.js';
@@ -9,7 +9,7 @@ function setup() {
   const store = new InMemoryStore();
   const emergencies = new EmergencyRepository(store);
   const roads = { streetRoute: vi.fn(async (origin, destination) => ({ origin, destination, primary: { distanceMeters: 2000, estimatedMinutes: 4, polyline: 'abc' }, alternatives: [] })) } as unknown as RoutesService;
-  const service = new EmergenciesService(emergencies, new AmbulanceRepository(store), new HospitalRepository(store), new TransportSolutionRepository(store), store, new DeterministicRouteProvider(), roads);
+  const service = new EmergenciesService(emergencies, new AmbulanceRepository(store), new HospitalRepository(store), new TransportSolutionRepository(store), store, new DeterministicRouteProvider(), roads, new DispatchEventRepository(store));
   const emergency = service.create({ description: 'Accidente simulado', latitude: -17.78, longitude: -63.17 });
   return { store, service, emergency };
 }

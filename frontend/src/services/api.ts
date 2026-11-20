@@ -40,7 +40,7 @@ export interface RouteView {
 
 export interface Hospital { id: string; name: string; latitude: number; longitude: number }
 export interface AmbulanceOption { id: string; code: string; hospital: Hospital; distanceMeters: number; estimatedMinutes: number; priceBs: number }
-export interface StreetRoute { origin: { latitude: number; longitude: number }; destination: { latitude: number; longitude: number }; primary: { distanceMeters: number; estimatedMinutes: number; polyline?: string }; alternatives: Array<{ distanceMeters: number; estimatedMinutes: number; polyline?: string }> }
+export interface StreetRoute { origin: { latitude: number; longitude: number }; destination: { latitude: number; longitude: number }; source?: string; primary: { distanceMeters: number; estimatedMinutes: number; polyline?: string }; alternatives: Array<{ distanceMeters: number; estimatedMinutes: number; polyline?: string }> }
 export interface Dispatch { ambulance: { id: string; code: string }; base: Hospital; hospital: Hospital; priceBs: number; pickup: StreetRoute; transfer: StreetRoute; solution: TransportSolutionView }
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -66,7 +66,35 @@ export function getRoute(id: string): Promise<RouteView> {
   return request<RouteView>(`/emergencies/${id}/route?blockage=true`, { method: 'POST' });
 }
 
-export function getHospitals(): Promise<Hospital[]> { return request<Hospital[]>('/hospitals?emergency=true'); }
+export function getHospitals(): Promise<Hospital[]> { return request<Hospital[]>('/hospitals'); }
 export function getAmbulanceOptions(id: string): Promise<AmbulanceOption[]> { return request<AmbulanceOption[]>(`/emergencies/${id}/ambulance-options`); }
 export function chooseAmbulance(id: string, ambulanceId: string): Promise<Dispatch> { return request<Dispatch>(`/emergencies/${id}/dispatch`, { method: 'POST', body: JSON.stringify({ ambulanceId }) }); }
 export function completeDispatch(id: string): Promise<{ status: string }> { return request<{ status: string }>(`/emergencies/${id}/complete`, { method: 'POST' }); }
+
+export type Patient = StreetRoute['origin'] & { id: string };
+export type SimulationUnit = { id: string; hospitalId: string };
+export type SimulationInput = { hospitalIds: string[]; patients: Patient[]; units: SimulationUnit[]; bedsUsed: string[] };
+export type SimulationTrip = { patientId: string; unit: SimulationUnit; base: Hospital; hospital: Hospital;
+  pickup: StreetRoute; transfer: StreetRoute; priceBs: number };
+type Cell = { row: number; col: number };
+export interface SimulationResult {
+  rows: { id: string; label: string; name: string }[];
+  columns: { id: string; label: string }[];
+  costs: number[][];
+  supply: number[];
+  demand: number[];
+  minimumCost: number;
+  pending: string[];
+  assignments: SimulationTrip[];
+  cells: { source: string; meters: number; baseFare: number; farePerKm: number; priceBs: number }[][];
+  trace: {
+    initial: number[][]; final: number[][]; initialCost: number; finalCost: number;
+    vogel: (Cell & { quantity: number; penalty: number; axis: 'row' | 'column'; index: number;
+      alternatives: number[]; rowPenalties: (number | null)[]; columnPenalties: (number | null)[] })[];
+    improvements: { cycle: Cell[]; delta: number; quantity: number; cost: number }[];
+  };
+}
+
+export function solveSimulation(input: SimulationInput): Promise<SimulationResult> {
+  return request<SimulationResult>('/simulations/transport/solve', { method: 'POST', body: JSON.stringify(input) });
+}

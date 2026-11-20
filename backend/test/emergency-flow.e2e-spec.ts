@@ -2,9 +2,10 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.config.js';
+import { RoutesService } from '../src/modules/routes/routes.service.js';
 
 describe('emergency flow', () => {
   let app: INestApplication<App>;
@@ -17,7 +18,29 @@ describe('emergency flow', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await app.close();
+  });
+
+  it('explains three dispatches and two pending people with a traceable fare', async () => {
+    const catalog = await request(app.getHttpServer()).get('/hospitals').expect(200);
+    expect(new Set(catalog.body.map((hospital: { id: string }) => hospital.id)).size).toBe(25);
+    const hospitalIds = catalog.body.slice(0, 4).map((hospital: { id: string }) => hospital.id);
+    vi.spyOn(app.get(RoutesService), 'streetRoute').mockImplementation(async (origin, destination) => ({
+      origin, destination, primary: { distanceMeters: 2400, estimatedMinutes: 7.4, polyline: 'test' },
+      alternatives: [], source: 'OSRM',
+    }));
+    const { body } = await request(app.getHttpServer()).post('/simulations/transport/solve').send({
+      hospitalIds,
+      patients: Array.from({ length: 5 }, (_, i) => ({ id: 'P' + (i + 1), latitude: -17.78, longitude: -63.17 })),
+      units: hospitalIds.slice(0, 3).map((hospitalId: string, i: number) => ({ id: 'A' + (i + 1), hospitalId })),
+      bedsUsed: [],
+    }).expect(201);
+    expect(body.assignments).toHaveLength(3);
+    expect(new Set(body.assignments.map((item: { unit: { id: string } }) => item.unit.id)).size).toBe(3);
+    expect(body.pending).toHaveLength(2);
+    expect(body.trace.finalCost).toBe(222);
+    expect(body.cells[0][0]).toMatchObject({ source: 'OSRM', meters: 2400, priceBs: 86.8 });
   });
 
   it('rejects invalid emergency coordinates and descriptions', async () => {

@@ -1,15 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EmergencyForm } from './features/emergency/EmergencyForm';
 import { MapPanel } from './features/map/MapPanel';
 import { locationFromGeolocation, type GeoPoint } from './features/map/map-utils';
 import { TransportMatrixCard } from './features/transport-matrix/TransportMatrixCard';
+import { TransportSimulation } from './features/transport-matrix/TransportSimulation';
 import { createEmergency, getHospitals, getAmbulanceOptions, chooseAmbulance, completeDispatch, type Hospital, type AmbulanceOption, type Dispatch } from './services/api';
 import './App.css';
 
 const initialLocation = { latitude: -17.7804, longitude: -63.1745 };
 type Phase = 'idle' | 'pickup' | 'at-incident' | 'transfer' | 'arrived';
 
+function userFacingError(cause: unknown, fallback: string) {
+  if (cause instanceof TypeError && /fetch/i.test(cause.message)) {
+    return 'No se pudo conectar con el servidor. Revisa que el backend esté encendido.';
+  }
+  return cause instanceof Error ? cause.message : fallback;
+}
+
 function App() {
+  const [multiple, setMultiple] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [showMatrix, setShowMatrix] = useState(false);
+  const locationRequest = useRef(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -19,34 +31,51 @@ function App() {
   const [dispatch, setDispatch] = useState<Dispatch | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [userLocation, setUserLocation] = useState<GeoPoint>(initialLocation);
-  const [locationMode, setLocationMode] = useState<'simulated' | 'current' | 'loading' | 'error'>('simulated');
+  const [locationMode, setLocationMode] = useState<'simulated' | 'map' | 'current' | 'loading' | 'error'>('simulated');
+  const [clock] = useState(() => Date.now());
 
-  useEffect(() => { getHospitals().then(setHospitals).catch(() => setError('No se pudo cargar la lista de hospitales. Revisa que el backend esté encendido.')); }, []);
+  useEffect(() => { getHospitals().then(setHospitals).catch((cause) => setError(userFacingError(cause, 'No se pudo cargar la lista de hospitales.'))); }, []);
   useEffect(() => {
     if (phase !== 'at-incident') return;
     const timer = window.setTimeout(() => setPhase('transfer'), 1800);
     return () => window.clearTimeout(timer);
   }, [phase]);
 
+  function updateLocation(point: GeoPoint, mode: 'map' | 'current') {
+    locationRequest.current += 1;
+    setUserLocation(point);
+    setLocationMode(mode);
+    setEmergencyId(null);
+    setOptions(null);
+    setDispatch(null);
+    setPhase('idle');
+    setError(null);
+  }
   function handleLocate() {
     if (!navigator.geolocation) { setLocationMode('error'); return; }
     setLocationMode('loading');
-    navigator.geolocation.getCurrentPosition((position) => { setUserLocation(locationFromGeolocation(position)); setLocationMode('current'); }, () => setLocationMode('error'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+    const request = ++locationRequest.current;
+    navigator.geolocation.getCurrentPosition((position) => {
+      if (locationRequest.current === request) updateLocation(locationFromGeolocation(position), 'current');
+    }, () => { if (locationRequest.current === request) setLocationMode('error'); },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
   }
   async function handleEmergency(description: string) {
+    setEditing(false);
+    setShowMatrix(false);
     setLoading(true); setError(null); setOptions(null); setDispatch(null); setPhase('idle');
     try {
       const emergency = await createEmergency({ description, ...userLocation });
       setEmergencyId(emergency.id);
       setOptions(await getAmbulanceOptions(emergency.id));
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudieron buscar ambulancias.'); }
+    } catch (cause) { setError(userFacingError(cause, 'No se pudieron buscar ambulancias.')); }
     finally { setLoading(false); }
   }
   async function handleChoice(ambulanceId: string) {
     if (!emergencyId) return;
     setLoading(true); setError(null);
     try { const selected = await chooseAmbulance(emergencyId, ambulanceId); setDispatch(selected); setPhase('pickup'); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo asignar la ambulancia.'); }
+    catch (cause) { setError(userFacingError(cause, 'No se pudo asignar la ambulancia.')); }
     finally { setLoading(false); }
   }
   function handleLegComplete() {
@@ -61,9 +90,92 @@ function App() {
   const cheapest = options?.reduce((best, item) => item.priceBs < best.priceBs ? item : best, options[0]);
   const activeRoute = dispatch ? (phase === 'transfer' || phase === 'arrived' ? dispatch.transfer : dispatch.pickup) : null;
   const inProgress = phase !== 'idle' && phase !== 'arrived';
-  const arrivalTime = (minutes: number) => new Date(Date.now() + minutes * 60_000).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+  const arrivalTime = (minutes: number) => new Date(clock + minutes * 60_000).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
 
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="/" aria-label="Ambulance Transport inicio"><span className="brand-mark">✚</span><span>AMBULANCE<span>TRANSPORT</span></span></a><div className="header-meta"><span className="live-pill"><i /> Simulación académica</span><span className="location-pill">Santa Cruz, BO</span></div></header><main><section className="hero-copy"><div><p className="eyebrow">Centro de despacho · Investigación operativa</p><h1>La ruta más rápida<br /><em>cuando cada minuto importa.</em></h1><p className="hero-lede">Compara ambulancias, precios de demostración y tiempos estimados. Luego sigue su recorrido hasta el hospital.</p></div><div className="hero-stat"><strong>01</strong><span>escenario<br />académico</span></div></section><div className="workflow-grid"><div className="left-column"><EmergencyForm loading={loading || inProgress} location={userLocation} locationMode={locationMode} onLocate={handleLocate} onSubmit={handleEmergency} />{loading && <div className="search-notice" role="status">{options ? 'Preparando el despacho…' : 'Buscando ambulancias…'}</div>}{error && <div className="error-banner" role="alert"><strong>No se pudo completar</strong><span>{error}</span></div>}{options && !dispatch && <section className="card options-card"><div className="section-heading"><div><p className="eyebrow">Paso 2 · Elige una unidad</p><h2>Ambulancias disponibles</h2></div><span className="badge badge-green">{options.length} disponibles</span></div><p className="demo-note">Tarifas estimadas en Bs para esta demostración. No se realizará ningún cobro.</p>{options.length > 0 ? <><label htmlFor="sort-options">Ordenar por</label><select id="sort-options" value={sortBy} onChange={(event) => setSortBy(event.target.value as 'time' | 'price')}><option value="time">Menor tiempo</option><option value="price">Menor precio</option></select><div className="ambulance-options">{sorted.map((item) => <article className="ambulance-option" key={item.id}><div className="option-top"><strong>{item.code}</strong><div>{item.id === nearest?.id && <span className="badge badge-green">Más cercana</span>} {item.id === cheapest?.id && <span className="badge badge-green">Más económica</span>}</div></div><p>{item.hospital.name}</p><div className="option-metrics"><span>⏱ {item.estimatedMinutes} min <small>llegada aprox. {arrivalTime(item.estimatedMinutes)}</small></span><span>⌖ {(item.distanceMeters / 1000).toFixed(1)} km</span><strong>Bs {item.priceBs.toFixed(2)}</strong></div><button className="button button-secondary" type="button" disabled={loading} onClick={() => handleChoice(item.id)}>Elegir ambulancia</button></article>)}</div></> : <p>No hay ambulancias disponibles cercanas. Intenta nuevamente.</p>}</section>}{dispatch && <><section className="card options-card"><p className="eyebrow">Tu elección</p><h2>{dispatch.ambulance.code} · Bs {dispatch.priceBs.toFixed(2)}</h2><p className="demo-note">Origen: {dispatch.base.name} · Destino recomendado: {dispatch.hospital.name}</p><p className="demo-note">{phase === 'pickup' ? 'La ambulancia se dirige al incidente.' : phase === 'at-incident' ? 'La ambulancia llegó al incidente.' : phase === 'transfer' ? 'Traslado en camino al hospital.' : 'Llegó al hospital. Simulación terminada.'}</p></section><TransportMatrixCard solution={dispatch.solution} /></>}</div><div className="right-column"><MapPanel route={activeRoute} userLocation={userLocation} hospitals={hospitals} phase={phase} onLegComplete={handleLegComplete} /></div></div></main><footer><span>Proyecto de Investigación Operativa</span><span>Método de transporte · PWA demostrativa</span></footer></div>;
+  return (
+    <div className="app-shell dispatch-shell">
+      <header className="topbar">
+        <a className="brand" href="/" aria-label="Ambulance Transport inicio"><span className="brand-mark">✚</span><span>AMBULANCE<span>TRANSPORT</span></span></a>
+        <nav className="screen-tabs" aria-label="Modo de simulación">
+          <button type="button" aria-pressed={!multiple} onClick={() => setMultiple(false)}>Un incidente</button>
+          <button type="button" aria-pressed={multiple} disabled={inProgress || loading} onClick={() => setMultiple(true)}>Múltiples incidentes</button>
+        </nav>
+        <span className="screen-city">Santa Cruz · Simulación académica</span>
+      </header>
+      <main>
+        {multiple ? <TransportSimulation /> : (
+          <div className="dispatch-workspace">
+            <MapPanel route={activeRoute} userLocation={userLocation} hospitals={hospitals} phase={phase}
+              onLegComplete={handleLegComplete} onPick={loading || inProgress ? undefined : (point) => updateLocation(point, 'map')} />
+            <aside className="dispatch-sheet" aria-label="Panel de incidente">
+              {(options || dispatch) && (
+                <nav className="screen-tabs" aria-label="Incidente">
+                  <button type="button" aria-pressed={editing} onClick={() => setEditing(true)}>Ubicación</button>
+                  <button type="button" aria-pressed={!editing && !showMatrix} onClick={() => { setEditing(false); setShowMatrix(false); }}>{dispatch ? 'Viaje' : 'Ambulancias'}</button>
+                  {dispatch && <button type="button" aria-pressed={!editing && showMatrix} onClick={() => { setEditing(false); setShowMatrix(true); }}>Matriz</button>}
+                </nav>
+              )}
+              {error && <div className="error-banner" role="alert">{error}</div>}
+              <ol className="flow-steps" aria-label="Pasos del despacho">
+                <li className="done"><span>1</span><strong>Ubica el incidente</strong></li>
+                <li className={options ? 'done' : ''}><span>2</span><strong>Compara ambulancias</strong></li>
+                <li className={dispatch ? 'done' : ''}><span>3</span><strong>Sigue el traslado</strong></li>
+              </ol>
+              <p className="screen-status" role="status">
+                {loading ? (options ? 'Preparando el despacho…' : 'Buscando ambulancias…')
+                  : phase === 'pickup' ? 'Ambulancia en camino al incidente'
+                  : phase === 'at-incident' ? 'Ambulancia llegó al incidente'
+                  : phase === 'transfer' ? 'Traslado en camino al hospital'
+                  : phase === 'arrived' ? 'Llegó al hospital'
+                  : options ? 'Elige la ambulancia que prefieras'
+                  : 'Listo para buscar ambulancias'}
+              </p>
+              <div className="sheet-content" hidden={!(editing || (!options && !dispatch))}>
+                <EmergencyForm loading={loading || inProgress} location={userLocation} locationMode={locationMode} onLocate={handleLocate} onSubmit={handleEmergency} />
+              </div>
+              {!editing && <div className="sheet-content" hidden={!options && !dispatch}>
+                {options && !dispatch && (
+                  <section className="card options-card">
+                    <div className="section-heading">
+                      <h2>Ambulancias disponibles</h2>
+                      <span className="badge badge-green">{options.length}</span>
+                    </div>
+                    <p className="demo-note tariff-note">Tarifa académica estimada · no es un cobro real</p>
+                    {options.length ? <>
+                      <select aria-label="Ordenar ambulancias" value={sortBy} onChange={(event) => {
+                        setSortBy(event.target.value as 'time' | 'price');
+                      }}>
+                        <option value="time">Ordenar por tiempo</option>
+                        <option value="price">Ordenar por precio</option>
+                      </select>
+                      <div className="ambulance-options">
+                        {sorted.map((item) => (
+                          <article className="ambulance-option" key={item.id}>
+                            <div className="option-top"><strong>{item.code}</strong></div>
+                            {item.id === nearest?.id && <span className="option-tag">Más cercana</span>}
+                            {item.id === cheapest?.id && <span className="option-tag">Más económica</span>}
+                            <p>{item.hospital.name}</p>
+                            <div className="option-metrics">
+                              <span>{item.estimatedMinutes} min · {(item.distanceMeters / 1000).toFixed(1)} km</span>
+                              <strong>Bs {item.priceBs.toFixed(2)}</strong>
+                            </div>
+                            <small className="option-arrival">Llegada aprox. {arrivalTime(item.estimatedMinutes)}</small>
+                            <button className="button button-secondary" type="button" disabled={loading}
+                              onClick={() => handleChoice(item.id)}>Elegir ambulancia</button>
+                          </article>
+                        ))}
+                      </div>
+                    </> : <p>No hay ambulancias disponibles cercanas. Intenta nuevamente.</p>}
+                  </section>
+                )}
+                {dispatch && !showMatrix && <section className="card options-card"><p className="eyebrow">Tu elección</p><h2>{dispatch.ambulance.code} · Bs {dispatch.priceBs.toFixed(2)}</h2><p className="demo-note">Origen: {dispatch.base.name} · Destino recomendado: {dispatch.hospital.name}</p><p className="demo-note">{phase === 'pickup' ? 'La ambulancia se dirige al incidente.' : phase === 'at-incident' ? 'La ambulancia llegó al incidente.' : phase === 'transfer' ? 'Traslado en camino al hospital.' : 'Llegó al hospital. Simulación terminada.'}</p></section>}{dispatch && showMatrix && <TransportMatrixCard solution={dispatch.solution} />}
+              </div>}
+            </aside>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
 
 export default App;

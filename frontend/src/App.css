@@ -17,3 +17,206 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
 .street-map { height: 420px; min-height: 320px; z-index: 0; }.ambulance-map-marker { border: 0; background: transparent; }.ambulance-map-marker span { display: grid; place-items: center; width: 36px; height: 36px; border: 3px solid white; border-radius: 50%; background: var(--marker-color); color: white; font-size: 20px; font-weight: 800; box-shadow: 0 2px 8px #12334a55; }
 .options-card { padding: 25px; }.demo-note { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 12px 0; }.search-notice { padding: 16px; border-radius: 12px; color: var(--teal); background: #e3f6f2; font-weight: 700; }.options-card select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); }.ambulance-options { display: grid; gap: 12px; margin-top: 16px; }.ambulance-option { padding: 15px; border: 1px solid var(--line); border-radius: 12px; }.option-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }.ambulance-option p { color: var(--muted); font-size: 13px; margin: 9px 0; }.option-metrics { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }.option-metrics small { display: block; color: var(--muted); }.ambulance-option .button { margin-top: 12px; width: 100%; }.option-top .badge { display: inline-block; margin-top: 3px; }
 @media (max-width: 520px) { .options-card { padding: 18px; }.street-map { height: 330px; } }
+.io-board { margin-top: 24px; }
+.io-board caption { text-align: left; padding: 12px; color: var(--muted); }
+.io-board th small, .io-cell small { display: block; margin-top: 4px; font-weight: normal; }
+.io-cell { color: inherit; background: transparent; border: 0; min-width: 75px; padding: 8px 4px; cursor: pointer; }
+.io-cell[aria-pressed="true"] { outline: 2px solid var(--teal); outline-offset: -2px; border-radius: 5px; }
+.io-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.io-actions button { cursor: pointer; color: var(--ink); background: white; border: 1px solid #a2b9c4; border-radius: 8px; padding: 8px 12px; }
+.io-actions button[aria-pressed="true"] { background: #def4f0; border-color: var(--teal); }
+.io-detail { margin-block: 12px; padding: 12px; border-radius: 8px; background: #eef7f7; }
+.io-board details { margin-block: 12px; }
+.io-board summary { cursor: pointer; font-weight: 700; }
+.io-hospital-list { display: grid; max-height: 190px; overflow: auto; margin-bottom: 12px; }
+
+.dispatch-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #f4f7f7;
+}
+.dispatch-shell .topbar {
+  width: 100%;
+  max-width: none;
+  height: 58px;
+  margin: 0;
+  padding: 0 18px;
+  gap: 12px;
+  background: white;
+}
+.screen-city { color: var(--muted); font-size: .78rem; }
+.dispatch-shell main { width: 100%; max-width: none; min-height: 0; padding: 12px; margin: 0; }
+.dispatch-workspace {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(410px, 33%) minmax(0, 1fr);
+  grid-template-areas: "panel map";
+  gap: 12px;
+}
+.dispatch-workspace .map-card { grid-area: map; position: relative; min-height: 0; padding: 0; border-radius: 16px; }
+.dispatch-workspace .street-map { width: 100%; height: 100%; min-height: 0; border-radius: 0; }
+.map-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 62px);
+}
+.dispatch-sheet {
+  grid-area: panel;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+  padding: 14px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.flow-steps li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: .66rem;
+  line-height: 1.15;
+}
+.flow-steps span {
+  display: grid;
+  flex: 0 0 19px;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #e7edef;
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+}
+.flow-steps li.done { color: var(--teal-dark); }
+.flow-steps li.done span { background: #dff4f0; color: var(--teal-dark); }
+.screen-status { padding: 7px 9px; border-radius: 8px; background: #f3f8f8; color: var(--teal-dark); font-weight: 700; }
+.sheet-content { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; }
+.screen-tabs, .sheet-actions, .screen-pager { display: flex; gap: 6px; align-items: center; }
+.screen-tabs button, .sheet-actions button, .screen-pager button {
+  border: 0;
+  background: #eef3f4;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.screen-tabs button[aria-pressed="true"], .sheet-actions button:not(:disabled) { background: #123c3a; color: white; }
+.screen-tabs button:disabled, .sheet-actions button:disabled, .screen-pager button:disabled { opacity: .52; cursor: default; }
+.screen-tabs button:focus-visible, .sheet-actions button:focus-visible, .screen-pager button:focus-visible, .io-cell:focus-visible { outline: 2px solid var(--teal-dark); outline-offset: 1px; }
+.sheet-actions { flex-wrap: wrap; }
+.screen-pager { justify-content: space-between; padding-block: 5px; font-size: .78rem; }
+.screen-status, .dispatch-sheet .error-banner { margin: 0; font-size: .78rem; }
+.dispatch-sheet .card, .dispatch-sheet .emergency-form { padding: 0; margin: 0; box-shadow: none; border: 0; background: transparent; }
+.dispatch-sheet h2 { font-size: 1rem; }
+.dispatch-sheet .section-heading { margin-bottom: 5px; }
+.dispatch-sheet .demo-note { margin: 4px 0; }
+.dispatch-sheet textarea { min-height: 48px; resize: none; padding: 5px 8px; font-size: .85rem; }
+.dispatch-sheet .location-chip { margin: 5px 0; padding: 5px 8px; }
+.dispatch-sheet label { margin-bottom: 3px; }
+.dispatch-sheet .button-location { width: auto; margin: 0; padding: 6px; }
+.dispatch-sheet .button-primary { margin-top: 7px; padding: 8px 12px; }
+.dispatch-sheet .ambulance-options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.dispatch-sheet .ambulance-options { overflow: auto; align-content: start; padding-right: 3px; }
+.dispatch-sheet .ambulance-option { padding: 6px; min-width: 0; }
+.dispatch-sheet .ambulance-option p { margin: 3px 0; line-height: 1.2; }
+.dispatch-sheet .ambulance-option .button { margin-top: 5px; padding: 5px; justify-content: center; }
+.option-tag { display: block; font-size: .66rem; font-weight: 750; color: var(--teal-dark); }
+.option-arrival { display: block; color: var(--muted); font-size: .66rem; }
+.dispatch-sheet .options-card select { padding: 4px; }
+.scenario-fields { padding: 0; border: 0; margin: 0; min-inline-size: 0; }
+.scenario-fields legend { padding: 0; margin-bottom: 6px; font-size: .84rem; font-weight: 750; }
+.hospital-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 5px; }
+.hospital-slots label { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.scenario-fields select, .map-tools select {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px;
+  background: white;
+  color: var(--ink);
+}
+.hospital-slots select { width: 100%; font-size: .77rem; }
+.trip-panel { font-size: .85rem; }
+.trip-panel p { margin: 3px 0; }
+.trip-summary { background: #eef7f7; padding: 8px; border-radius: 8px; }
+.dispatch-sheet .io-board { font-size: .83rem; }
+.io-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.board-tabs, .board-switch { margin-bottom: 4px; }
+.dispatch-sheet .board-table { margin: 0; }
+.board-table table { min-width: 0; table-layout: fixed; }
+.board-table th, .board-table td { padding: 2px 1px; font-size: .66rem; overflow-wrap: anywhere; }
+.board-table th:first-child { width: 14%; text-align: center; }
+.dispatch-sheet .io-board caption { padding: 2px 4px; font-size: .7rem; }
+.board-table .io-cell { display: block; width: 100%; min-width: 0; padding: 3px 0; font: inherit; min-height: 24px; }
+.board-table .io-cell small { margin: 0; line-height: 1; }
+.dispatch-sheet .io-detail { margin: 6px 0; padding: 8px; line-height: 1.35; overflow-wrap: anywhere; }
+.dispatch-sheet .io-detail p { margin: 5px 0; }
+
+@media (max-width: 760px) {
+  .dispatch-shell .topbar { height: 46px; padding-inline: 8px; }
+  .screen-city { display: none; }
+  .dispatch-shell .brand { gap: 5px; font-size: 9px; }
+  .dispatch-shell .brand > span:last-child span { font-size: 8px; }
+  .dispatch-shell main { padding: 0; }
+  .dispatch-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(100px, 1fr) auto;
+    grid-template-areas: "map" "panel";
+    gap: 0;
+  }
+  .dispatch-workspace .map-card { border: 0; border-radius: 0; }
+  .dispatch-sheet {
+    max-height: calc(100dvh - 146px);
+    border-width: 1px 0 0;
+    border-radius: 17px 17px 0 0;
+    padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    gap: 5px;
+  }
+  .screen-tabs button, .sheet-actions button, .screen-pager button { padding: 7px 8px; font-size: .72rem; }
+  .dispatch-sheet .ambulance-option p, .dispatch-sheet .option-metrics { font-size: .72rem; }
+  .dispatch-sheet .ambulance-options {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 3px;
+  }
+  .dispatch-sheet .ambulance-option {
+    flex: 0 0 min(82vw, 270px);
+    scroll-snap-align: start;
+  }
+  .flow-steps strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+@media (max-height: 525px) and (min-width: 555px) {
+  .dispatch-workspace { grid-template-columns: minmax(290px, 47%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "panel map"; }
+  .dispatch-sheet { max-height: none; }
+}
