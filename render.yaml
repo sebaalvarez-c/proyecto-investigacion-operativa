@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci --include=dev && npm run build --workspace backend
-    startCommand: npm run start:prod --workspace backend
+    startCommand: node backend/dist/main.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
