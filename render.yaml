@@ -3,7 +3,7 @@ services:
     name: proyecto-investigacion-operativa-api
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build --workspace backend
+    buildCommand: npm ci --include=dev && npm run build --workspace backend
     startCommand: npm run start:prod --workspace backend
     healthCheckPath: /health
     envVars:
