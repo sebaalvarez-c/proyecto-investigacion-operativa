@@ -2,6 +2,7 @@ services:
   - type: web
     name: proyecto-investigacion-operativa-api
     runtime: node
+    plan: free
     rootDir: backend
     buildCommand: npm ci --include-workspace-root && npm run build
     startCommand: npm run start:prod
