@@ -1,7 +1,8 @@
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 
 export function configureApp(app: INestApplication): void {
-  const allowedOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+  const configuredOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+  const allowedOrigins = [...new Set([...configuredOrigins, 'https://ambulance-transport.vercel.app'])];
   const isProduction = process.env.NODE_ENV === 'production';
   const productionOrigin = (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
     const isAllowed = !origin || allowedOrigins.includes(origin);
