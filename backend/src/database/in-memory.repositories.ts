@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InMemoryStore } from './in-memory-store.js';
-import type { AmbulanceStatus, DispatchEventRecord, DispatchEventType, EmergencyRecord, HospitalRecord, RouteRecord, TransportSolutionRecord } from './in-memory-store.js';
+import type { AmbulanceStatus, CommunicationRecord, CommunicationSender, DispatchEventRecord, DispatchEventType, EmergencyRecord, HospitalRecord, RouteRecord, TransportSolutionRecord } from './in-memory-store.js';
 
 @Injectable()
 export class EmergencyRepository {
@@ -95,5 +95,25 @@ export class DispatchEventRepository {
 
   list(emergencyId: string): DispatchEventRecord[] {
     return this.store.dispatchEvents.filter((event) => event.emergencyId === emergencyId);
+  }
+}
+
+@Injectable()
+export class CommunicationRepository {
+  constructor(private readonly store: InMemoryStore) {}
+
+  create(input: { emergencyId: string; from: CommunicationSender; text: string; isAudio: boolean; ambulanceCode?: string }): CommunicationRecord {
+    const record: CommunicationRecord = { ...input, id: this.store.newId(), createdAt: new Date().toISOString() };
+    this.store.communications.push(record);
+    void this.store.persistCommunication(record);
+    return record;
+  }
+
+  listByEmergency(emergencyId: string): CommunicationRecord[] {
+    return this.store.communications.filter((c) => c.emergencyId === emergencyId);
+  }
+
+  listAll(): CommunicationRecord[] {
+    return [...this.store.communications].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 }
