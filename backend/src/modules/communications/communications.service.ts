@@ -40,29 +40,45 @@ export class CommunicationsService {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new InternalServerErrorException('GEMINI_API_KEY no configurada en el servidor.');
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: 'Transcribí este audio médico en español. Devolvé únicamente el texto transcripto, sin comentarios adicionales.' },
-              { inlineData: { mimeType, data: base64Audio } },
-            ],
-          }],
-        }),
-      },
-    );
+    // Strip codec parameters — Gemini expects simple MIME types like 'audio/webm', not 'audio/webm;codecs=opus'
+    const simpleMimeType = mimeType.split(';')[0].trim();
 
-    if (!response.ok) {
-      const err = await response.text().catch(() => 'unknown');
-      throw new InternalServerErrorException(`Gemini respondió ${response.status}: ${err}`);
+    const body = JSON.stringify({
+      contents: [{
+        parts: [
+          { text: 'Transcribí este audio médico en español. Devolvé únicamente el texto transcripto, sin comentarios adicionales.' },
+          { inlineData: { mimeType: simpleMimeType, data: base64Audio } },
+        ],
+      }],
+    });
+
+    const MAX_RETRIES = 3;
+    let lastError = '';
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+      );
+
+      if (response.ok) {
+        const data = await response.json() as { candidates?: { content: { parts: { text: string }[] } }[] };
+        return data.candidates?.[0]?.content?.parts?.[0]?.text ?? 'No se pudo transcribir el audio.';
+      }
+
+      const errText = await response.text().catch(() => 'unknown');
+
+      // Retry on 503 (service overloaded) with exponential backoff
+      if (response.status === 503 && attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, attempt * 1500));
+        lastError = errText;
+        continue;
+      }
+
+      throw new InternalServerErrorException(`Gemini respondió ${response.status}: ${errText}`);
     }
 
-    const data = await response.json() as { candidates?: { content: { parts: { text: string }[] } }[] };
-    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? 'No se pudo transcribir el audio.';
+    throw new InternalServerErrorException(`Gemini no disponible después de ${MAX_RETRIES} intentos: ${lastError}`);
   }
 
   private fireWebhook(payload: Record<string, unknown>): void {
