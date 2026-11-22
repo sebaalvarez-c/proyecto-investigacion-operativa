@@ -86,6 +86,7 @@ export function HospitalPage() {
       <main className="hospital-main">
         <aside className="hospital-sidebar">
           <p className="eyebrow sidebar-eyebrow">Notificaciones</p>
+          <p className="demo-note" style={{ fontSize: '.75rem', marginBottom: '.4rem' }}>Correo de este dispositivo para recibir alertas.</p>
           <input
             type="email"
             className="notify-email-input"

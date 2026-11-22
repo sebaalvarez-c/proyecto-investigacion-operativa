@@ -138,7 +138,7 @@ export function AmbulancePage() {
           <p className="eyebrow">Notificaciones</p>
           <h2>Email de alerta</h2>
           <p className="demo-note">
-            Ingresá el correo de este dispositivo. Make.com enviará las alertas ahí.
+            Ingresá el correo de este dispositivo para recibir alertas de emergencia.
           </p>
           <input
             type="email"
@@ -155,7 +155,7 @@ export function AmbulancePage() {
           <p className="eyebrow">Comunicar al hospital</p>
           <h2>Enviar audio</h2>
           <p className="demo-note">
-            Grabá tu mensaje — Gemini lo transcribe y llega al hospital vía Telegram.
+            Grabá tu mensaje — se transcribe automáticamente y llega al hospital.
           </p>
           {error && <div className="error-banner" role="alert">{error}</div>}
           <div className="record-area">
