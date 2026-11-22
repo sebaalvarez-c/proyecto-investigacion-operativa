@@ -13,6 +13,7 @@ export class CommunicationsService {
       text: dto.text,
       isAudio: dto.isAudio ?? false,
       ambulanceCode: dto.ambulanceCode,
+      recipientEmail: dto.recipientEmail,
     });
     this.fireWebhook({
       type: 'communication',
@@ -21,6 +22,7 @@ export class CommunicationsService {
       text: record.text,
       isAudio: record.isAudio,
       ambulanceCode: record.ambulanceCode,
+      recipientEmail: record.recipientEmail,
       timestamp: record.createdAt,
     });
     return record;

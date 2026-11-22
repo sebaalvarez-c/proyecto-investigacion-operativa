@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getAllMessages, sendMessage, transcribeAudio, type CommunicationMessage } from '../../services/api';
+import { useRecipientEmail } from '../../hooks/useRecipientEmail';
 
 type RecordingState = 'idle' | 'recording' | 'processing' | 'done';
 
@@ -16,6 +17,7 @@ const MOCK_DISPATCH = {
 const POLL_INTERVAL_MS = 5000;
 
 export function AmbulancePage() {
+  const [recipientEmail, setRecipientEmail] = useRecipientEmail();
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export function AmbulancePage() {
         text: transcript,
         isAudio: true,
         ambulanceCode: MOCK_DISPATCH.code,
+        recipientEmail: recipientEmail || undefined,
       });
       setTranscript('');
       setRecordingState('idle');
@@ -129,6 +132,22 @@ export function AmbulancePage() {
               <strong className="eta-value">{MOCK_DISPATCH.etaMinutes} min</strong>
             </div>
           </div>
+        </section>
+
+        <section className="card amb-card">
+          <p className="eyebrow">Notificaciones</p>
+          <h2>Email de alerta</h2>
+          <p className="demo-note">
+            Ingresá el correo de este dispositivo. Make.com enviará las alertas ahí.
+          </p>
+          <input
+            type="email"
+            className="notify-email-input"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="tu@correo.com"
+            aria-label="Email de notificación"
+          />
         </section>
 
         <section className="card amb-card">

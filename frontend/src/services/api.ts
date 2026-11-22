@@ -106,6 +106,7 @@ export interface CommunicationMessage {
   text: string;
   isAudio: boolean;
   ambulanceCode?: string;
+  recipientEmail?: string;
   createdAt: string;
 }
 
