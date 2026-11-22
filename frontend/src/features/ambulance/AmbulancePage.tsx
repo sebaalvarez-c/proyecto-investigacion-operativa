@@ -49,12 +49,24 @@ export function AmbulancePage() {
     setTranscript('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const PREFERRED_TYPES = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+        'audio/mp4',       // iOS Safari 14.3+
+        'video/mp4',       // iOS fallback (contains audio track)
+      ];
+      const chosenType = PREFERRED_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
+      const mr = chosenType
+        ? new MediaRecorder(stream, { mimeType: chosenType })
+        : new MediaRecorder(stream);
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        void processAudio(new Blob(chunksRef.current, { type: 'audio/webm' }));
+        const resolvedType = mr.mimeType || chosenType || 'audio/webm';
+        void processAudio(new Blob(chunksRef.current, { type: resolvedType }));
       };
       mediaRef.current = mr;
       mr.start();
