@@ -49,12 +49,15 @@ export function AmbulancePage() {
     setTranscript('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const mimeType = ['audio/webm', 'audio/ogg', 'audio/mp4'].find(
+        (t) => MediaRecorder.isTypeSupported(t),
+      ) ?? '';
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        void processAudio(new Blob(chunksRef.current, { type: 'audio/webm' }));
+        void processAudio(new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' }));
       };
       mediaRef.current = mr;
       mr.start();
