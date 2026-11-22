@@ -1,6 +1,8 @@
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import { json } from 'express';
 
 export function configureApp(app: INestApplication): void {
+  app.use(json({ limit: '10mb' }));
   const configuredOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
   const allowedOrigins = [...new Set([...configuredOrigins, 'https://ambulance-transport.vercel.app'])];
   const isProduction = process.env.NODE_ENV === 'production';
