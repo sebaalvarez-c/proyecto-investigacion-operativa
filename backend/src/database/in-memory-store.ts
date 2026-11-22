@@ -77,6 +77,7 @@ export interface CommunicationRecord {
   text: string;
   isAudio: boolean;
   ambulanceCode?: string;
+  recipientEmail?: string;
   createdAt: string;
 }
 

@@ -17,4 +17,8 @@ export class CreateMessageDto {
   @IsString()
   @IsOptional()
   ambulanceCode?: string;
+
+  @IsString()
+  @IsOptional()
+  recipientEmail?: string;
 }

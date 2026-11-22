@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getAllMessages, sendMessage, type CommunicationMessage } from '../../services/api';
+import { useRecipientEmail } from '../../hooks/useRecipientEmail';
 
 interface IncomingAmbulance {
   id: string;
@@ -19,6 +20,7 @@ const MOCK_AMBULANCES: IncomingAmbulance[] = [
 const POLL_INTERVAL_MS = 5000;
 
 export function HospitalPage() {
+  const [recipientEmail, setRecipientEmail] = useRecipientEmail();
   const [selected, setSelected] = useState<string>(MOCK_AMBULANCES[0].id);
   const [messages, setMessages] = useState<CommunicationMessage[]>([]);
   const [reply, setReply] = useState('');
@@ -51,6 +53,7 @@ export function HospitalPage() {
         from: 'hospital',
         text: text.trim(),
         isAudio: false,
+        recipientEmail: recipientEmail || undefined,
       });
       setReply('');
       void loadMessages();
@@ -82,7 +85,16 @@ export function HospitalPage() {
 
       <main className="hospital-main">
         <aside className="hospital-sidebar">
-          <p className="eyebrow sidebar-eyebrow">Ambulancias en camino</p>
+          <p className="eyebrow sidebar-eyebrow">Notificaciones</p>
+          <input
+            type="email"
+            className="notify-email-input"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="tu@correo.com"
+            aria-label="Email de notificación"
+          />
+          <p className="eyebrow sidebar-eyebrow" style={{ marginTop: '1rem' }}>Ambulancias en camino</p>
           {MOCK_AMBULANCES.map((amb) => (
             <button
               key={amb.id}

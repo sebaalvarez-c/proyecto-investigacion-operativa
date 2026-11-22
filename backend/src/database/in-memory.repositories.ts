@@ -102,7 +102,7 @@ export class DispatchEventRepository {
 export class CommunicationRepository {
   constructor(private readonly store: InMemoryStore) {}
 
-  create(input: { emergencyId: string; from: CommunicationSender; text: string; isAudio: boolean; ambulanceCode?: string }): CommunicationRecord {
+  create(input: { emergencyId: string; from: CommunicationSender; text: string; isAudio: boolean; ambulanceCode?: string; recipientEmail?: string }): CommunicationRecord {
     const record: CommunicationRecord = { ...input, id: this.store.newId(), createdAt: new Date().toISOString() };
     this.store.communications.push(record);
     void this.store.persistCommunication(record);
