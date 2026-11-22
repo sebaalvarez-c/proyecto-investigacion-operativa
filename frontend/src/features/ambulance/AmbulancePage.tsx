@@ -79,11 +79,14 @@ export function AmbulancePage() {
   async function processAudio(blob: Blob) {
     setRecordingState('processing');
     try {
+      console.log('[audio] blob size:', blob.size, 'type:', blob.type);
       const base64 = await blobToBase64(blob);
+      console.log('[audio] base64 length:', base64.length, 'mimeType sent:', blob.type || 'audio/webm');
       const { text } = await transcribeAudio(base64, blob.type || 'audio/webm');
       setTranscript(text);
       setRecordingState('done');
-    } catch {
+    } catch (err) {
+      console.error('[audio] transcription error:', err);
       setError('No se pudo transcribir el audio. Intentá de nuevo.');
       setRecordingState('idle');
     }
