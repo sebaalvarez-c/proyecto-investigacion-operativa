@@ -93,6 +93,7 @@ export function HospitalPage() {
             onChange={(e) => setRecipientEmail(e.target.value)}
             placeholder="tu@correo.com"
             aria-label="Email de notificación"
+            autoComplete="email"
           />
           <p className="eyebrow sidebar-eyebrow" style={{ marginTop: '1rem' }}>Ambulancias en camino</p>
           {MOCK_AMBULANCES.map((amb) => (

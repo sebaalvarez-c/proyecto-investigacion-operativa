@@ -147,6 +147,7 @@ export function AmbulancePage() {
             onChange={(e) => setRecipientEmail(e.target.value)}
             placeholder="tu@correo.com"
             aria-label="Email de notificación"
+            autoComplete="email"
           />
         </section>
 
