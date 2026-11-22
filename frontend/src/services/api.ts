@@ -98,3 +98,29 @@ export interface SimulationResult {
 export function solveSimulation(input: SimulationInput): Promise<SimulationResult> {
   return request<SimulationResult>('/simulations/transport/solve', { method: 'POST', body: JSON.stringify(input) });
 }
+
+export interface CommunicationMessage {
+  id: string;
+  emergencyId: string;
+  from: 'ambulance' | 'hospital';
+  text: string;
+  isAudio: boolean;
+  ambulanceCode?: string;
+  createdAt: string;
+}
+
+export function sendMessage(input: Omit<CommunicationMessage, 'id' | 'createdAt'>): Promise<CommunicationMessage> {
+  return request<CommunicationMessage>('/communications', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function getMessagesByEmergency(emergencyId: string): Promise<CommunicationMessage[]> {
+  return request<CommunicationMessage[]>(`/communications/${emergencyId}`);
+}
+
+export function getAllMessages(): Promise<CommunicationMessage[]> {
+  return request<CommunicationMessage[]>('/communications');
+}
+
+export function transcribeAudio(audio: string, mimeType: string): Promise<{ text: string }> {
+  return request<{ text: string }>('/communications/transcribe', { method: 'POST', body: JSON.stringify({ audio, mimeType }) });
+}

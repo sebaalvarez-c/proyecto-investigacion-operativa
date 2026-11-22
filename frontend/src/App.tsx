@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { Routes, Route, NavLink } from 'react-router-dom';
 import { EmergencyForm } from './features/emergency/EmergencyForm';
 import { MapPanel } from './features/map/MapPanel';
 import { locationFromGeolocation, type GeoPoint } from './features/map/map-utils';
 import { TransportMatrixCard } from './features/transport-matrix/TransportMatrixCard';
 import { TransportSimulation } from './features/transport-matrix/TransportSimulation';
+import { AmbulancePage } from './features/ambulance/AmbulancePage';
+import { HospitalPage } from './features/hospital/HospitalPage';
 import { createEmergency, getHospitals, getAmbulanceOptions, chooseAmbulance, completeDispatch, type Hospital, type AmbulanceOption, type Dispatch } from './services/api';
 import './App.css';
 
@@ -92,7 +95,7 @@ function App() {
   const inProgress = phase !== 'idle' && phase !== 'arrived';
   const arrivalTime = (minutes: number) => new Date(clock + minutes * 60_000).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
 
-  return (
+  const dispatchPage = (
     <div className="app-shell dispatch-shell">
       <header className="topbar">
         <a className="brand" href="/" aria-label="Ambulance Transport inicio"><span className="brand-mark">✚</span><span>AMBULANCE<span>TRANSPORT</span></span></a>
@@ -100,7 +103,11 @@ function App() {
           <button type="button" aria-pressed={!multiple} onClick={() => setMultiple(false)}>Un incidente</button>
           <button type="button" aria-pressed={multiple} disabled={inProgress || loading} onClick={() => setMultiple(true)}>Múltiples incidentes</button>
         </nav>
-        <span className="screen-city">Santa Cruz · Simulación académica</span>
+        <nav className="page-nav" aria-label="Vistas">
+          <NavLink to="/" end className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Despacho</NavLink>
+          <NavLink to="/ambulance" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Ambulancia</NavLink>
+          <NavLink to="/hospital" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Hospital</NavLink>
+        </nav>
       </header>
       <main>
         {multiple ? <TransportSimulation /> : (
@@ -175,6 +182,14 @@ function App() {
         )}
       </main>
     </div>
+  );
+
+  return (
+    <Routes>
+      <Route path="/ambulance" element={<AmbulancePage />} />
+      <Route path="/hospital" element={<HospitalPage />} />
+      <Route path="*" element={dispatchPage} />
+    </Routes>
   );
 }
 

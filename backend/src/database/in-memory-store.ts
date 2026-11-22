@@ -69,6 +69,17 @@ export interface DispatchEventRecord {
   occurredAt: string;
 }
 
+export type CommunicationSender = 'ambulance' | 'hospital';
+export interface CommunicationRecord {
+  id: string;
+  emergencyId: string;
+  from: CommunicationSender;
+  text: string;
+  isAudio: boolean;
+  ambulanceCode?: string;
+  createdAt: string;
+}
+
 @Injectable()
 export class InMemoryStore {
   readonly databaseMode = process.env.DATABASE_MODE ?? 'memory';
@@ -114,18 +125,20 @@ export class InMemoryStore {
   readonly routes: RouteRecord[] = [];
   readonly transportSolutions: TransportSolutionRecord[] = [];
   readonly dispatchEvents: DispatchEventRecord[] = [];
+  readonly communications: CommunicationRecord[] = [];
 
   async onModuleInit(): Promise<void> {
     if (!this.supabase) return;
-    const [hospitals, ambulances, emergencies, routes, solutions, events] = await Promise.all([
+    const [hospitals, ambulances, emergencies, routes, solutions, events, comms] = await Promise.all([
       this.supabase.from('hospitals').select('*'),
       this.supabase.from('ambulances').select('*'),
       this.supabase.from('emergencies').select('*'),
       this.supabase.from('routes').select('*'),
       this.supabase.from('transport_solutions').select('*'),
       this.supabase.from('dispatch_events').select('*'),
+      this.supabase.from('communications').select('*').order('created_at', { ascending: true }),
     ]);
-    if (hospitals.error || ambulances.error || emergencies.error || routes.error || solutions.error || events.error) {
+    if (hospitals.error || ambulances.error || emergencies.error || routes.error || solutions.error || events.error || comms.error) {
       throw new Error('Supabase no pudo cargar los datos iniciales. Revisa las migraciones y las credenciales.');
     }
     this.hospitals.splice(0, this.hospitals.length, ...(hospitals.data ?? []).map((row) => this.mapHospital(row)));
@@ -134,6 +147,7 @@ export class InMemoryStore {
     this.routes.splice(0, this.routes.length, ...(routes.data ?? []).map((row) => this.mapRoute(row)));
     this.transportSolutions.splice(0, this.transportSolutions.length, ...(solutions.data ?? []).map((row) => this.mapSolution(row)));
     this.dispatchEvents.splice(0, this.dispatchEvents.length, ...(events.data ?? []).map((row) => this.mapEvent(row)));
+    this.communications.splice(0, this.communications.length, ...(comms.data ?? []).map((row) => this.mapCommunication(row)));
   }
 
   async persistEmergency(record: EmergencyRecord): Promise<void> {
@@ -156,6 +170,10 @@ export class InMemoryStore {
     await this.write('dispatch_events', { id: record.id, emergency_id: record.emergencyId, event_type: record.eventType, payload: record.payload, occurred_at: record.occurredAt });
   }
 
+  async persistCommunication(record: CommunicationRecord): Promise<void> {
+    await this.write('communications', { id: record.id, emergency_id: record.emergencyId, from_role: record.from, text: record.text, is_audio: record.isAudio, ambulance_code: record.ambulanceCode ?? null, created_at: record.createdAt });
+  }
+
   private createSupabaseClient(): SupabaseClient | null {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -174,6 +192,7 @@ export class InMemoryStore {
   private mapRoute(row: any): RouteRecord { return { id: row.id, emergencyId: row.emergency_id, origin: row.origin, destination: row.destination, distanceMeters: row.distance_meters, estimatedMinutes: Number(row.estimated_minutes), hasBlockage: row.has_blockage, alternativeRoute: row.alternative_route ?? undefined, alternatives: row.alternative_route ? [row.alternative_route] : [], status: row.status }; }
   private mapSolution(row: any): TransportSolutionRecord { return { id: row.id, emergencyId: row.emergency_id, method: row.method, initialMatrix: row.initial_matrix, finalAssignment: row.final_assignment, totalCostMinutes: Number(row.total_cost_minutes) }; }
   private mapEvent(row: any): DispatchEventRecord { return { id: row.id, emergencyId: row.emergency_id, eventType: row.event_type, payload: row.payload, occurredAt: row.occurred_at }; }
+  private mapCommunication(row: any): CommunicationRecord { return { id: row.id, emergencyId: row.emergency_id, from: row.from_role, text: row.text, isAudio: row.is_audio, ambulanceCode: row.ambulance_code ?? undefined, createdAt: row.created_at }; }
 
   newId(): string {
     return randomUUID();
