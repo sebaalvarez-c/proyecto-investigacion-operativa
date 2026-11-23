@@ -6,8 +6,8 @@ import { decodeEncodedPolyline, interpolatePoint, type GeoPoint } from './map-ut
 
 const toLatLng = (point: GeoPoint): L.LatLngExpression => [point.latitude, point.longitude];
 const noPeople: (GeoPoint & { id: string })[] = [];
-function markerIcon(color: string, glyph: string): L.DivIcon {
-  return L.divIcon({ className: 'ambulance-map-marker', html: `<span style="--marker-color:${color}">${glyph}</span>`, iconSize: [38, 38], iconAnchor: [19, 19] });
+function markerIcon(color: string, glyph: string, size = 36): L.DivIcon {
+  return L.divIcon({ className: 'ambulance-map-marker', html: `<span style="--marker-color:${color};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.52)}px">${glyph}</span>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 }
 
 export function MapPanel({ route, userLocation, hospitals, phase, onLegComplete, onPick, people = noPeople }: { route: StreetRoute | null; userLocation: GeoPoint; hospitals: Hospital[]; phase: 'idle' | 'pickup' | 'at-incident' | 'transfer' | 'arrived'; onLegComplete: () => void; onPick?: (point: GeoPoint) => void; people?: (GeoPoint & { id: string })[] }) {
@@ -39,23 +39,26 @@ export function MapPanel({ route, userLocation, hospitals, phase, onLegComplete,
     });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
     const selected = people.find((point) => point.latitude === userLocation.latitude && point.longitude === userLocation.longitude);
-    L.marker(toLatLng(userLocation), { icon: markerIcon('#4285f4', selected?.id ?? '●'), title: selected?.id ?? 'Ubicación del incidente' }).addTo(map);
+    L.marker(toLatLng(userLocation), { icon: markerIcon('#f59e0b', '📍'), title: selected?.id ?? 'Ubicación del incidente' }).addTo(map);
     people.filter((point) => point.latitude !== userLocation.latitude || point.longitude !== userLocation.longitude)
-      .forEach((point) => L.marker(toLatLng(point), { icon: markerIcon('#4285f4', point.id), title: point.id }).addTo(map));
+      .forEach((point) => L.marker(toLatLng(point), { icon: markerIcon('#7c3aed', '👤', 32), title: point.id }).addTo(map));
     const hospitalLayer = L.layerGroup().addTo(map);
     function showHospitals() {
       hospitalLayer.clearLayers();
       const groups: Hospital[][] = [];
       for (const hospital of hospitals) {
         const point = map.project(toLatLng(hospital), map.getZoom());
-        const group = map.getZoom() < 17 && groups.find(([first]) => point.distanceTo(map.project(toLatLng(first), map.getZoom())) < 38);
+        const group = map.getZoom() < 12 && groups.find(([first]) => point.distanceTo(map.project(toLatLng(first), map.getZoom())) < 32);
         if (group) group.push(hospital);
         else groups.push([hospital]);
       }
       for (const [first, ...others] of groups) {
         const popup = document.createElement('div');
         popup.textContent = [first, ...others].map((hospital) => hospital.name).join(' · ');
-        L.marker(toLatLng(first), { icon: markerIcon('#4f83c2', others.length ? String(others.length + 1) : '+'),
+        const clusterColor = others.length ? '#b91c1c' : '#dc2626';
+        const clusterGlyph = others.length ? String(others.length + 1) : '✚';
+        const clusterSize = others.length ? 32 : 28;
+        L.marker(toLatLng(first), { icon: markerIcon(clusterColor, clusterGlyph, clusterSize),
           title: popup.textContent, bubblingMouseEvents: false }).bindPopup(popup).addTo(hospitalLayer);
       }
     }
