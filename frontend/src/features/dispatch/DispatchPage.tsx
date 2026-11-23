@@ -100,7 +100,11 @@ export function DispatchPage() {
     setResetting(true);
     try {
       await resetDemo();
-      handleClear();
+      setEmergencyId(null);
+      setOptions(null);
+      setDispatch(null);
+      setPhase('idle');
+      setError(null);
       setSessionEmergencies(0);
       setSessionCostBs(0);
       setSessionDispatches(0);
