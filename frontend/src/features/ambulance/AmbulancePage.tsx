@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { getAllMessages, sendMessage, transcribeAudio, type CommunicationMessage } from '../../services/api';
+import { getAllMessages, sendMessage, transcribeAudio, getActiveDispatches, type CommunicationMessage, type ActiveDispatch } from '../../services/api';
 import { useRecipientEmail } from '../../hooks/useRecipientEmail';
 
 type RecordingState = 'idle' | 'recording' | 'processing' | 'done';
 
-const MOCK_DISPATCH = {
-  emergencyId: 'demo-emergency',
-  code: 'AMB-003',
-  address: 'Av. Monseñor Rivero y 2do Anillo',
-  hospitalName: 'Hospital San Juan de Dios',
-  etaMinutes: 6,
-  phase: 'En camino al incidente',
-};
-
 const POLL_INTERVAL_MS = 5000;
+
+function fmtEta(s: number) {
+  if (s <= 0) return 'Llegando…';
+  const m = Math.floor(s / 60), r = s % 60;
+  return m > 0 ? `${m} min ${String(r).padStart(2, '0')} s` : `${s} s`;
+}
 
 export function AmbulancePage() {
   const [recipientEmail, setRecipientEmail] = useRecipientEmail();
@@ -22,21 +19,47 @@ export function AmbulancePage() {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommunicationMessage[]>([]);
+  const [activeDispatch, setActiveDispatch] = useState<ActiveDispatch | null>(null);
+  const [etaSecs, setEtaSecs] = useState<number | null>(null);
+  const dispatchSeenRef = useRef<{ id: string; at: number; initialSecs: number } | null>(null);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    void loadMessages();
-    const interval = setInterval(() => void loadMessages(), POLL_INTERVAL_MS);
+    void loadAll();
+    const interval = setInterval(() => void loadAll(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
-  async function loadMessages() {
+  useEffect(() => {
+    if (!activeDispatch) {
+      dispatchSeenRef.current = null;
+      setEtaSecs(null);
+      return;
+    }
+    if (dispatchSeenRef.current?.id !== activeDispatch.emergencyId) {
+      dispatchSeenRef.current = {
+        id: activeDispatch.emergencyId,
+        at: Date.now(),
+        initialSecs: Math.round(activeDispatch.etaPickupMinutes * 60),
+      };
+    }
+    const ref = dispatchSeenRef.current!;
+    const tick = () => setEtaSecs(Math.max(0, ref.initialSecs - Math.round((Date.now() - ref.at) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [activeDispatch?.emergencyId]);
+
+  async function loadAll() {
     try {
-      const all = await getAllMessages();
-      setMessages(all.filter((m) => m.from === 'hospital'));
+      const [dispatches, all] = await Promise.all([getActiveDispatches(), getAllMessages()]);
+      const latest = dispatches[dispatches.length - 1] ?? null;
+      setActiveDispatch(latest);
+      const emergencyId = latest?.emergencyId;
+      setMessages(all.filter((m) => m.from === 'hospital' && (!emergencyId || m.emergencyId === emergencyId)));
     } catch {
-      // silent — keep existing messages
+      // silent — keep existing state
     }
   }
 
@@ -90,19 +113,19 @@ export function AmbulancePage() {
   }
 
   async function sendToHospital() {
-    if (!transcript) return;
+    if (!transcript || !activeDispatch) return;
     try {
       await sendMessage({
-        emergencyId: MOCK_DISPATCH.emergencyId,
+        emergencyId: activeDispatch.emergencyId,
         from: 'ambulance',
         text: transcript,
         isAudio: true,
-        ambulanceCode: MOCK_DISPATCH.code,
+        ambulanceCode: activeDispatch.ambulanceCode,
         recipientEmail: recipientEmail || undefined,
       });
       setTranscript('');
       setRecordingState('idle');
-      void loadMessages();
+      void loadAll();
     } catch {
       setError('No se pudo enviar el mensaje. Intentá de nuevo.');
     }
@@ -111,12 +134,12 @@ export function AmbulancePage() {
   return (
     <div className="app-shell dispatch-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Ambulance Transport inicio">
+        <a className="brand" href="/" aria-label="EmergIA inicio">
           <span className="brand-mark">✚</span>
-          <span>AMBULANCE<span>TRANSPORT</span></span>
+          <span>EmergIA<span>Ambulancia</span></span>
         </a>
         <nav className="page-nav" aria-label="Vistas">
-          <NavLink to="/" end className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Despacho</NavLink>
+          <NavLink to="/dispatch" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Despacho</NavLink>
           <NavLink to="/ambulance" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Ambulancia</NavLink>
           <NavLink to="/hospital" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Hospital</NavLink>
         </nav>
@@ -126,24 +149,34 @@ export function AmbulancePage() {
       <main className="ambulance-main">
         <section className="card amb-card">
           <p className="eyebrow">Despacho activo</p>
-          <div className="amb-status-row">
-            <span className="amb-unit">{MOCK_DISPATCH.code}</span>
-            <span className="badge badge-green">{MOCK_DISPATCH.phase}</span>
-          </div>
-          <div className="amb-detail">
-            <div className="amb-detail-row">
-              <span className="amb-label">Incidente</span>
-              <strong>{MOCK_DISPATCH.address}</strong>
-            </div>
-            <div className="amb-detail-row">
-              <span className="amb-label">Hospital destino</span>
-              <strong>{MOCK_DISPATCH.hospitalName}</strong>
-            </div>
-            <div className="amb-detail-row amb-eta-row">
-              <span className="amb-label">ETA estimado</span>
-              <strong className="eta-value">{MOCK_DISPATCH.etaMinutes} min</strong>
-            </div>
-          </div>
+          {activeDispatch ? (
+            <>
+              <div className="amb-status-row">
+                <span className="amb-unit">{activeDispatch.ambulanceCode}</span>
+                <span className="badge badge-green">En camino al incidente</span>
+              </div>
+              <div className="amb-detail">
+                <div className="amb-detail-row">
+                  <span className="amb-label">Incidente</span>
+                  <strong>{activeDispatch.emergencyDescription}</strong>
+                </div>
+                <div className="amb-detail-row">
+                  <span className="amb-label">Hospital destino</span>
+                  <strong>{activeDispatch.hospitalName}</strong>
+                </div>
+                <div className="amb-detail-row amb-eta-row">
+                  <span className="amb-label">ETA estimado</span>
+                  <strong className={`eta-value eta-countdown${etaSecs === 0 ? ' eta-arriving' : ''}`}>
+                    {etaSecs !== null ? fmtEta(etaSecs) : `${activeDispatch.etaPickupMinutes} min`}
+                  </strong>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="demo-note" style={{ marginTop: '.5rem' }}>
+              Sin despacho activo. Simulá un accidente en el panel de despacho.
+            </p>
+          )}
         </section>
 
         <section className="card amb-card">
@@ -190,7 +223,7 @@ export function AmbulancePage() {
             <div className="transcript-box">
               <span className="amb-label">Transcripción</span>
               <p>{transcript}</p>
-              <button type="button" className="button button-primary" onClick={() => void sendToHospital()}>
+              <button type="button" className="button button-primary" disabled={!activeDispatch} onClick={() => void sendToHospital()}>
                 <span>📤</span>Enviar al hospital
               </button>
             </div>
