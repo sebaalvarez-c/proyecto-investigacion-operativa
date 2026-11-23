@@ -15,6 +15,9 @@ export class EmergenciesController {
   @Get('active')
   active() { return this.emergencies.getActive(); }
 
+  @Post('reset-demo')
+  resetDemo() { return this.emergencies.resetDemo(); }
+
   @Post(':id/optimize')
   optimize(@Param('id') id: string, @Query('availability') availability?: string) {
     return this.emergencies.optimize(id, availability === 'none');

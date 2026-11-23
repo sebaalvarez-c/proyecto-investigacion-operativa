@@ -317,7 +317,7 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
 
 /* ── Metrics bar ───────────────────────────────────────────── */
 .metrics-bar {
-  display: flex; gap: 6px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 4px 0;
 }
 .metric-chip {
@@ -327,6 +327,15 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
   font-size: .68rem;
 }
 .metric-chip strong { font-weight: 800; }
+.reset-demo-btn {
+  margin-left: auto;
+  padding: 3px 10px; border-radius: 6px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted);
+  font-size: .68rem; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.reset-demo-btn:hover:not(:disabled) { background: #fff0f0; color: #c0392b; border-color: #f5c6c6; }
+.reset-demo-btn:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ── Landing page ──────────────────────────────────────────── */
 .landing {

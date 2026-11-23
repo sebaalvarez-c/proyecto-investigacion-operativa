@@ -86,6 +86,13 @@ export class EmergenciesService {
     return result;
   }
 
+  resetDemo() {
+    this.dispatches.clear();
+    const all = this.ambulances.list();
+    all.forEach((a) => this.ambulances.updateStatus(a.id, 'AVAILABLE'));
+    return { cleared: true, ambulances: all.length };
+  }
+
   getActive() {
     return Array.from(this.dispatches.entries())
       .map(([emergencyId, d]) => {

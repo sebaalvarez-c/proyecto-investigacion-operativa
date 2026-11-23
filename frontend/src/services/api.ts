@@ -135,6 +135,10 @@ export function getActiveDispatches(): Promise<ActiveDispatch[]> {
   return request<ActiveDispatch[]>('/emergencies/active');
 }
 
+export function resetDemo(): Promise<{ cleared: boolean; ambulances: number }> {
+  return request('/emergencies/reset-demo', { method: 'POST' });
+}
+
 export function transcribeAudio(audio: string, mimeType: string): Promise<{ text: string }> {
   return request<{ text: string }>('/communications/transcribe', { method: 'POST', body: JSON.stringify({ audio, mimeType }) });
 }

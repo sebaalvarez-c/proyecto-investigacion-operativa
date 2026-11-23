@@ -5,7 +5,7 @@ import { MapPanel } from '../map/MapPanel';
 import { locationFromGeolocation, type GeoPoint } from '../map/map-utils';
 import { TransportMatrixCard } from '../transport-matrix/TransportMatrixCard';
 import { TransportSimulation } from '../transport-matrix/TransportSimulation';
-import { createEmergency, getHospitals, getAmbulanceOptions, chooseAmbulance, completeDispatch, type Hospital, type AmbulanceOption, type Dispatch } from '../../services/api';
+import { createEmergency, getHospitals, getAmbulanceOptions, chooseAmbulance, completeDispatch, resetDemo, type Hospital, type AmbulanceOption, type Dispatch } from '../../services/api';
 
 const initialLocation = { latitude: -17.7804, longitude: -63.1745 };
 type Phase = 'idle' | 'pickup' | 'at-incident' | 'transfer' | 'arrived';
@@ -36,6 +36,7 @@ export function DispatchPage() {
   const [sessionEmergencies, setSessionEmergencies] = useState(0);
   const [sessionCostBs, setSessionCostBs] = useState(0);
   const [sessionDispatches, setSessionDispatches] = useState(0);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => { getHospitals().then(setHospitals).catch((cause) => setError(userFacingError(cause, 'No se pudo cargar la lista de hospitales.'))); }, []);
   useEffect(() => {
@@ -95,6 +96,19 @@ export function DispatchPage() {
       if (emergencyId) completeDispatch(emergencyId).catch(() => setError('El traslado terminó, pero no se pudo liberar la ambulancia simulada.'));
     }
   }
+  async function handleReset() {
+    setResetting(true);
+    try {
+      await resetDemo();
+      handleClear();
+      setSessionEmergencies(0);
+      setSessionCostBs(0);
+      setSessionDispatches(0);
+    } finally {
+      setResetting(false);
+    }
+  }
+
   const sorted = [...(options ?? [])].sort((a, b) => sortBy === 'price' ? a.priceBs - b.priceBs : a.estimatedMinutes - b.estimatedMinutes);
   const nearest = options?.reduce((best, item) => item.estimatedMinutes < best.estimatedMinutes ? item : best, options[0]);
   const cheapest = options?.reduce((best, item) => item.priceBs < best.priceBs ? item : best, options[0]);
@@ -135,13 +149,24 @@ export function DispatchPage() {
                 <li className={options ? 'done' : ''}><span>2</span><strong>Compara ambulancias</strong></li>
                 <li className={dispatch ? 'done' : ''}><span>3</span><strong>Sigue el traslado</strong></li>
               </ol>
-              {sessionDispatches > 0 && (
-                <div className="metrics-bar">
-                  <span className="metric-chip"><strong>{sessionEmergencies}</strong> emergencias</span>
-                  <span className="metric-chip"><strong>Bs {sessionCostBs.toFixed(0)}</strong> optimizados</span>
-                  <span className="metric-chip"><strong>{sessionDispatches}</strong> despachos</span>
-                </div>
-              )}
+              <div className="metrics-bar">
+                {sessionDispatches > 0 && (
+                  <>
+                    <span className="metric-chip"><strong>{sessionEmergencies}</strong> emergencias</span>
+                    <span className="metric-chip"><strong>Bs {sessionCostBs.toFixed(0)}</strong> optimizados</span>
+                    <span className="metric-chip"><strong>{sessionDispatches}</strong> despachos</span>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="reset-demo-btn"
+                  onClick={() => void handleReset()}
+                  disabled={resetting || loading || inProgress}
+                  title="Libera todas las ambulancias y limpia el estado del demo"
+                >
+                  {resetting ? '↺ Reseteando…' : '↺ Reset demo'}
+                </button>
+              </div>
               <p className="screen-status" role="status">
                 {loading ? (options ? 'Preparando el despacho…' : 'Buscando ambulancias…')
                   : phase === 'pickup' ? 'Ambulancia en camino al incidente'
