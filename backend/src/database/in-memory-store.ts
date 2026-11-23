@@ -91,6 +91,11 @@ export class InMemoryStore {
     { id: '20000000-0000-4000-8000-000000000003', code: 'AMB-SC-03', latitude: -17.779274, longitude: -63.1863553, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000003', baseFare: 65, farePerKm: 6 },
     { id: '20000000-0000-4000-8000-000000000004', code: 'AMB-SC-04', latitude: -17.7590925, longitude: -63.1084301, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000004', baseFare: 75, farePerKm: 9 },
     { id: '20000000-0000-4000-8000-000000000005', code: 'AMB-SC-05', latitude: -17.8551372, longitude: -63.1896206, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000005', baseFare: 100, farePerKm: 5 },
+    { id: '20000000-0000-4000-8000-000000000006', code: 'AMB-SC-06', latitude: -17.7809723, longitude: -63.1863038, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000006', baseFare: 70, farePerKm: 7 },
+    { id: '20000000-0000-4000-8000-000000000007', code: 'AMB-SC-07', latitude: -17.7781027, longitude: -63.1875549, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000007', baseFare: 85, farePerKm: 6 },
+    { id: '20000000-0000-4000-8000-000000000008', code: 'AMB-SC-08', latitude: -17.8387857, longitude: -63.1101281, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000008', baseFare: 60, farePerKm: 8 },
+    { id: '20000000-0000-4000-8000-000000000009', code: 'AMB-SC-09', latitude: -17.7996139, longitude: -63.1180817, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000009', baseFare: 90, farePerKm: 6 },
+    { id: '20000000-0000-4000-8000-000000000010', code: 'AMB-SC-10', latitude: -17.7362258, longitude: -63.1614352, status: 'AVAILABLE', capacity: 1, currentHospitalId: '10000000-0000-4000-8000-000000000021', baseFare: 75, farePerKm: 7 },
   ];
 
   readonly hospitals: HospitalRecord[] = [
