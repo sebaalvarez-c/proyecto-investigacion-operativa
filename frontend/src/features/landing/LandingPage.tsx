@@ -36,7 +36,7 @@ export function LandingPage() {
 
           <div className="landing-live-stats">
             <div className={`stat-pill${available !== null && available > 0 ? ' stat-pill--green' : ''}`}>
-              <span className="stat-pill-num">{available ?? '—'}</span>
+              <span className="stat-pill-num">{available ?? '—'}<small style={{fontSize:'0.5em',opacity:0.7}}>/10</small></span>
               <span className="stat-pill-label">ambulancias<br/>disponibles</span>
             </div>
             <div className="stat-pill">
