@@ -7,6 +7,12 @@ type RecordingState = 'idle' | 'recording' | 'processing' | 'done';
 
 const POLL_INTERVAL_MS = 5000;
 
+function fmtEta(s: number) {
+  if (s <= 0) return 'Llegando…';
+  const m = Math.floor(s / 60), r = s % 60;
+  return m > 0 ? `${m} min ${String(r).padStart(2, '0')} s` : `${s} s`;
+}
+
 export function AmbulancePage() {
   const [recipientEmail, setRecipientEmail] = useRecipientEmail();
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -14,6 +20,8 @@ export function AmbulancePage() {
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommunicationMessage[]>([]);
   const [activeDispatch, setActiveDispatch] = useState<ActiveDispatch | null>(null);
+  const [etaSecs, setEtaSecs] = useState<number | null>(null);
+  const dispatchSeenRef = useRef<{ id: string; at: number; initialSecs: number } | null>(null);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -22,6 +30,26 @@ export function AmbulancePage() {
     const interval = setInterval(() => void loadAll(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!activeDispatch) {
+      dispatchSeenRef.current = null;
+      setEtaSecs(null);
+      return;
+    }
+    if (dispatchSeenRef.current?.id !== activeDispatch.emergencyId) {
+      dispatchSeenRef.current = {
+        id: activeDispatch.emergencyId,
+        at: Date.now(),
+        initialSecs: Math.round(activeDispatch.etaPickupMinutes * 60),
+      };
+    }
+    const ref = dispatchSeenRef.current!;
+    const tick = () => setEtaSecs(Math.max(0, ref.initialSecs - Math.round((Date.now() - ref.at) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [activeDispatch?.emergencyId]);
 
   async function loadAll() {
     try {
@@ -138,7 +166,9 @@ export function AmbulancePage() {
                 </div>
                 <div className="amb-detail-row amb-eta-row">
                   <span className="amb-label">ETA estimado</span>
-                  <strong className="eta-value">{activeDispatch.etaPickupMinutes} min</strong>
+                  <strong className={`eta-value eta-countdown${etaSecs === 0 ? ' eta-arriving' : ''}`}>
+                    {etaSecs !== null ? fmtEta(etaSecs) : `${activeDispatch.etaPickupMinutes} min`}
+                  </strong>
                 </div>
               </div>
             </>

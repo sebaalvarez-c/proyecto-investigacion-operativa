@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getAllMessages, sendMessage, getActiveDispatches, type CommunicationMessage, type ActiveDispatch } from '../../services/api';
 import { useRecipientEmail } from '../../hooks/useRecipientEmail';
 
 const POLL_INTERVAL_MS = 5000;
+
+function fmtEta(s: number) {
+  if (s <= 0) return 'Llegando…';
+  const m = Math.floor(s / 60), r = s % 60;
+  return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${s}s`;
+}
 
 export function HospitalPage() {
   const [recipientEmail, setRecipientEmail] = useRecipientEmail();
@@ -13,6 +19,10 @@ export function HospitalPage() {
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [etaMap, setEtaMap] = useState<Map<string, number>>(new Map());
+  const dispatchSeenRef = useRef<Map<string, { at: number; initialSecs: number }>>(new Map());
+  const prevAmbMsgsRef = useRef<Record<string, number>>({});
 
   const selectedAmb = ambulances.find((a) => a.emergencyId === selectedId) ?? ambulances[0] ?? null;
 
@@ -21,6 +31,56 @@ export function HospitalPage() {
     const interval = setInterval(() => void loadAll(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
+
+  // ETA countdown per ambulance
+  useEffect(() => {
+    ambulances.forEach((amb) => {
+      if (!dispatchSeenRef.current.has(amb.emergencyId)) {
+        dispatchSeenRef.current.set(amb.emergencyId, {
+          at: Date.now(),
+          initialSecs: Math.round(amb.etaPickupMinutes * 60),
+        });
+      }
+    });
+    for (const id of dispatchSeenRef.current.keys()) {
+      if (!ambulances.find((a) => a.emergencyId === id)) dispatchSeenRef.current.delete(id);
+    }
+  }, [ambulances]);
+
+  useEffect(() => {
+    if (ambulances.length === 0) { setEtaMap(new Map()); return; }
+    const tick = () => {
+      const now = Date.now();
+      const next = new Map<string, number>();
+      for (const [id, info] of dispatchSeenRef.current) {
+        next.set(id, Math.max(0, info.initialSecs - Math.round((now - info.at) / 1000)));
+      }
+      setEtaMap(next);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [ambulances.length]);
+
+  // Toast when new ambulance messages arrive
+  useEffect(() => {
+    if (!selectedAmb) return;
+    const ambMsgs = messages.filter((m) => m.from === 'ambulance' && m.emergencyId === selectedAmb.emergencyId);
+    const prev = prevAmbMsgsRef.current[selectedAmb.emergencyId] ?? 0;
+    if (ambMsgs.length > prev && prev > 0) {
+      const latest = ambMsgs[ambMsgs.length - 1];
+      const code = latest.ambulanceCode ?? selectedAmb.ambulanceCode;
+      const preview = latest.text.length > 55 ? latest.text.slice(0, 55) + '…' : latest.text;
+      setToast(`📡 ${code}: ${preview}`);
+    }
+    prevAmbMsgsRef.current[selectedAmb.emergencyId] = ambMsgs.length;
+  }, [messages, selectedAmb?.emergencyId]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 4500);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   async function loadAll() {
     try {
@@ -62,6 +122,12 @@ export function HospitalPage() {
 
   return (
     <div className="app-shell dispatch-shell">
+      {toast && (
+        <div className="toast-notification" role="alert">
+          {toast}
+          <button className="toast-close" onClick={() => setToast(null)} aria-label="Cerrar">×</button>
+        </div>
+      )}
       <header className="topbar">
         <a className="brand" href="/" aria-label="EmergIA inicio">
           <span className="brand-mark">✚</span>
@@ -101,7 +167,9 @@ export function HospitalPage() {
               >
                 <div className="amb-list-top">
                   <strong>{amb.ambulanceCode}</strong>
-                  <span className="badge badge-green">{amb.etaPickupMinutes} min</span>
+                  <span className={`badge badge-green eta-countdown${(etaMap.get(amb.emergencyId) ?? 1) === 0 ? ' eta-arriving' : ''}`}>
+                    {fmtEta(etaMap.get(amb.emergencyId) ?? Math.round(amb.etaPickupMinutes * 60))}
+                  </span>
                 </div>
                 <p className="amb-condition">{amb.emergencyDescription}</p>
                 <span className="amb-phase-label">En camino</span>
@@ -119,7 +187,9 @@ export function HospitalPage() {
                     <p className="eyebrow">Ambulancia seleccionada</p>
                     <h2>{selectedAmb.ambulanceCode}</h2>
                   </div>
-                  <span className="badge badge-green">{selectedAmb.etaPickupMinutes} min ETA</span>
+                  <span className={`badge badge-green eta-countdown${(etaMap.get(selectedAmb.emergencyId) ?? 1) === 0 ? ' eta-arriving' : ''}`}>
+                    {fmtEta(etaMap.get(selectedAmb.emergencyId) ?? Math.round(selectedAmb.etaPickupMinutes * 60))} ETA
+                  </span>
                 </div>
                 <p className="demo-note">Condición del paciente: {selectedAmb.emergencyDescription}</p>
                 <p className="demo-note" style={{ fontSize: '.75rem', color: 'var(--muted)' }}>

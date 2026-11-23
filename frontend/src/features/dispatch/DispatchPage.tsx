@@ -112,6 +112,9 @@ export function DispatchPage() {
   const sorted = [...(options ?? [])].sort((a, b) => sortBy === 'price' ? a.priceBs - b.priceBs : a.estimatedMinutes - b.estimatedMinutes);
   const nearest = options?.reduce((best, item) => item.estimatedMinutes < best.estimatedMinutes ? item : best, options[0]);
   const cheapest = options?.reduce((best, item) => item.priceBs < best.priceBs ? item : best, options[0]);
+  const maxDist = options ? Math.max(...options.map((o) => o.distanceMeters)) : 1;
+  const minDist = options ? Math.min(...options.map((o) => o.distanceMeters)) : 0;
+  const barPct = (dist: number) => maxDist === minDist ? 100 : Math.round((1 - (dist - minDist) / (maxDist - minDist)) * 80 + 20);
   const activeRoute = dispatch ? (phase === 'transfer' || phase === 'arrived' ? dispatch.transfer : dispatch.pickup) : null;
   const inProgress = phase !== 'idle' && phase !== 'arrived';
   const arrivalTime = (minutes: number) => new Date(clock + minutes * 60_000).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
@@ -196,16 +199,24 @@ export function DispatchPage() {
                       </select>
                       <div className="ambulance-options">
                         {sorted.map((item) => (
-                          <article className="ambulance-option" key={item.id}>
-                            <div className="option-top"><strong>{item.code}</strong></div>
-                            {item.id === nearest?.id && <span className="option-tag">Más cercana</span>}
-                            {item.id === cheapest?.id && <span className="option-tag">Más económica</span>}
-                            <p>{item.hospital.name}</p>
-                            <div className="option-metrics">
-                              <span>{item.estimatedMinutes} min · {(item.distanceMeters / 1000).toFixed(1)} km</span>
-                              <strong>Bs {item.priceBs.toFixed(2)}</strong>
+                          <article className={`ambulance-option${item.id === nearest?.id ? ' option--optimal' : ''}`} key={item.id}>
+                            <div className="option-header">
+                              <span className="option-amb-icon">🚑</span>
+                              <div className="option-amb-info">
+                                <div className="option-amb-code">{item.code}</div>
+                                <div className="option-amb-hospital">{item.hospital.name}</div>
+                              </div>
+                              {item.id === nearest?.id && <span className="option-optimal-badge">✦ Óptima</span>}
+                              {item.id !== nearest?.id && item.id === cheapest?.id && <span className="option-optimal-badge" style={{ background: 'var(--blue)' }}>$ Económica</span>}
                             </div>
-                            <small className="option-arrival">Llegada aprox. {arrivalTime(item.estimatedMinutes)}</small>
+                            <div className="option-dist-bar">
+                              <div className="option-dist-fill" style={{ width: `${barPct(item.distanceMeters)}%` }} />
+                            </div>
+                            <div className="option-stats">
+                              <span className="option-time-val">{item.estimatedMinutes}<small> min</small></span>
+                              <span className="option-price-val">Bs {item.priceBs.toFixed(2)}</span>
+                            </div>
+                            <small className="option-arrival">📍 {(item.distanceMeters / 1000).toFixed(1)} km · Llegada {arrivalTime(item.estimatedMinutes)}</small>
                             <button className="button button-secondary" type="button" disabled={loading}
                               onClick={() => handleChoice(item.id)}>Elegir ambulancia</button>
                           </article>

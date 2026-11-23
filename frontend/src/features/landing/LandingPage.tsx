@@ -1,6 +1,17 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getAvailableCount } from '../../services/api';
 
 export function LandingPage() {
+  const [available, setAvailable] = useState<number | null>(null);
+
+  useEffect(() => {
+    const load = () => getAvailableCount().then(setAvailable).catch(() => {});
+    void load();
+    const id = setInterval(() => void load(), 10_000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="landing">
       <header className="landing-nav">
@@ -21,6 +32,21 @@ export function LandingPage() {
           <div className="landing-tagline-box">
             <span className="landing-tagline-mark">🚨</span>
             <p>Cuando el momento es crítico,<br/><strong>EmergIA está para vos.</strong></p>
+          </div>
+
+          <div className="landing-live-stats">
+            <div className={`stat-pill${available !== null && available > 0 ? ' stat-pill--green' : ''}`}>
+              <span className="stat-pill-num">{available ?? '—'}</span>
+              <span className="stat-pill-label">ambulancias<br/>disponibles</span>
+            </div>
+            <div className="stat-pill">
+              <span className="stat-pill-num">5</span>
+              <span className="stat-pill-label">hospitales<br/>conectados</span>
+            </div>
+            <div className="stat-pill">
+              <span className="stat-pill-num">~1.8s</span>
+              <span className="stat-pill-label">transcripción<br/>de audio</span>
+            </div>
           </div>
 
           <div className="landing-pillars-row">

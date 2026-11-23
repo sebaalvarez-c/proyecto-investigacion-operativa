@@ -139,6 +139,10 @@ export function resetDemo(): Promise<{ cleared: boolean; ambulances: number }> {
   return request('/emergencies/reset-demo', { method: 'POST' });
 }
 
+export function getAvailableCount(): Promise<number> {
+  return request<{ id: string }[]>('/ambulances?status=AVAILABLE').then((a) => a.length);
+}
+
 export function transcribeAudio(audio: string, mimeType: string): Promise<{ text: string }> {
   return request<{ text: string }>('/communications/transcribe', { method: 'POST', body: JSON.stringify({ audio, mimeType }) });
 }
