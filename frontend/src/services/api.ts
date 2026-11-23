@@ -122,6 +122,19 @@ export function getAllMessages(): Promise<CommunicationMessage[]> {
   return request<CommunicationMessage[]>('/communications');
 }
 
+export interface ActiveDispatch {
+  emergencyId: string;
+  ambulanceCode: string;
+  emergencyDescription: string;
+  hospitalName: string;
+  etaPickupMinutes: number;
+  etaTransferMinutes: number;
+}
+
+export function getActiveDispatches(): Promise<ActiveDispatch[]> {
+  return request<ActiveDispatch[]>('/emergencies/active');
+}
+
 export function transcribeAudio(audio: string, mimeType: string): Promise<{ text: string }> {
   return request<{ text: string }>('/communications/transcribe', { method: 'POST', body: JSON.stringify({ audio, mimeType }) });
 }

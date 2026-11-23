@@ -1,45 +1,37 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { getAllMessages, sendMessage, type CommunicationMessage } from '../../services/api';
+import { getAllMessages, sendMessage, getActiveDispatches, type CommunicationMessage, type ActiveDispatch } from '../../services/api';
 import { useRecipientEmail } from '../../hooks/useRecipientEmail';
-
-interface IncomingAmbulance {
-  id: string;
-  code: string;
-  emergencyId: string;
-  etaMinutes: number;
-  condition: string;
-  phase: string;
-}
-
-const MOCK_AMBULANCES: IncomingAmbulance[] = [
-  { id: '1', code: 'AMB-003', emergencyId: 'demo-emergency', etaMinutes: 6, condition: 'Trauma moderado', phase: 'En camino' },
-  { id: '2', code: 'AMB-007', emergencyId: 'demo-emergency-2', etaMinutes: 14, condition: 'Politraumatismo', phase: 'En camino' },
-];
 
 const POLL_INTERVAL_MS = 5000;
 
 export function HospitalPage() {
   const [recipientEmail, setRecipientEmail] = useRecipientEmail();
-  const [selected, setSelected] = useState<string>(MOCK_AMBULANCES[0].id);
+  const [ambulances, setAmbulances] = useState<ActiveDispatch[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommunicationMessage[]>([]);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedAmb = MOCK_AMBULANCES.find((a) => a.id === selected);
+  const selectedAmb = ambulances.find((a) => a.emergencyId === selectedId) ?? ambulances[0] ?? null;
 
   useEffect(() => {
-    void loadMessages();
-    const interval = setInterval(() => void loadMessages(), POLL_INTERVAL_MS);
+    void loadAll();
+    const interval = setInterval(() => void loadAll(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
-  async function loadMessages() {
+  async function loadAll() {
     try {
-      setMessages(await getAllMessages());
+      const [dispatches, msgs] = await Promise.all([getActiveDispatches(), getAllMessages()]);
+      setAmbulances(dispatches);
+      setMessages(msgs);
+      if (dispatches.length > 0) {
+        setSelectedId((prev) => prev ?? dispatches[0].emergencyId);
+      }
     } catch {
-      // silent — keep existing messages
+      // silent — keep existing state
     }
   }
 
@@ -56,7 +48,7 @@ export function HospitalPage() {
         recipientEmail: recipientEmail || undefined,
       });
       setReply('');
-      void loadMessages();
+      void loadAll();
     } catch {
       setError('No se pudo enviar el mensaje. Intentá de nuevo.');
     } finally {
@@ -71,12 +63,12 @@ export function HospitalPage() {
   return (
     <div className="app-shell dispatch-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Ambulance Transport inicio">
+        <a className="brand" href="/" aria-label="EmergIA inicio">
           <span className="brand-mark">✚</span>
-          <span>AMBULANCE<span>TRANSPORT</span></span>
+          <span>EmergIA<span>Hospital</span></span>
         </a>
         <nav className="page-nav" aria-label="Vistas">
-          <NavLink to="/" end className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Despacho</NavLink>
+          <NavLink to="/dispatch" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Despacho</NavLink>
           <NavLink to="/ambulance" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Ambulancia</NavLink>
           <NavLink to="/hospital" className={({ isActive }) => `page-tab${isActive ? ' page-tab--active' : ''}`}>Hospital</NavLink>
         </nav>
@@ -97,35 +89,42 @@ export function HospitalPage() {
             autoComplete="email"
           />
           <p className="eyebrow sidebar-eyebrow" style={{ marginTop: '1rem' }}>Ambulancias en camino</p>
-          {MOCK_AMBULANCES.map((amb) => (
-            <button
-              key={amb.id}
-              type="button"
-              className={`amb-list-item${selected === amb.id ? ' amb-list-item--selected' : ''}`}
-              onClick={() => setSelected(amb.id)}
-            >
-              <div className="amb-list-top">
-                <strong>{amb.code}</strong>
-                <span className="badge badge-green">{amb.etaMinutes} min</span>
-              </div>
-              <p className="amb-condition">{amb.condition}</p>
-              <span className="amb-phase-label">{amb.phase}</span>
-            </button>
-          ))}
+          {ambulances.length === 0 ? (
+            <p className="demo-note" style={{ fontSize: '.8rem', marginTop: '.5rem' }}>Sin ambulancias activas.</p>
+          ) : (
+            ambulances.map((amb) => (
+              <button
+                key={amb.emergencyId}
+                type="button"
+                className={`amb-list-item${selectedAmb?.emergencyId === amb.emergencyId ? ' amb-list-item--selected' : ''}`}
+                onClick={() => setSelectedId(amb.emergencyId)}
+              >
+                <div className="amb-list-top">
+                  <strong>{amb.ambulanceCode}</strong>
+                  <span className="badge badge-green">{amb.etaPickupMinutes} min</span>
+                </div>
+                <p className="amb-condition">{amb.emergencyDescription}</p>
+                <span className="amb-phase-label">En camino</span>
+              </button>
+            ))
+          )}
         </aside>
 
         <section className="hospital-detail">
-          {selectedAmb && (
+          {selectedAmb ? (
             <>
               <div className="card hosp-card">
                 <div className="section-heading">
                   <div>
                     <p className="eyebrow">Ambulancia seleccionada</p>
-                    <h2>{selectedAmb.code}</h2>
+                    <h2>{selectedAmb.ambulanceCode}</h2>
                   </div>
-                  <span className="badge badge-green">{selectedAmb.etaMinutes} min ETA</span>
+                  <span className="badge badge-green">{selectedAmb.etaPickupMinutes} min ETA</span>
                 </div>
-                <p className="demo-note">Condición del paciente: {selectedAmb.condition}</p>
+                <p className="demo-note">Condición del paciente: {selectedAmb.emergencyDescription}</p>
+                <p className="demo-note" style={{ fontSize: '.75rem', color: 'var(--muted)' }}>
+                  Destino: {selectedAmb.hospitalName}
+                </p>
                 <div className="quick-actions">
                   <button type="button" className="button button-secondary" disabled={sending}
                     onClick={() => void sendReply('Sala lista para recibir.')}>Sala lista</button>
@@ -148,7 +147,7 @@ export function HospitalPage() {
                       <li key={m.id} className={`comm-item comm-item--${m.from}`}>
                         <span className="comm-time">
                           {new Date(m.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
-                          {' · '}{m.from === 'ambulance' ? (m.ambulanceCode ?? selectedAmb.code) : 'Hospital'}
+                          {' · '}{m.from === 'ambulance' ? (m.ambulanceCode ?? selectedAmb.ambulanceCode) : 'Hospital'}
                           {m.isAudio ? ' 🎙️' : ''}
                         </span>
                         <p>{m.text}</p>
@@ -177,6 +176,13 @@ export function HospitalPage() {
                 </div>
               </div>
             </>
+          ) : (
+            <div className="card hosp-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+              <p className="demo-note" style={{ textAlign: 'center' }}>
+                Sin despacho activo.<br />
+                <span style={{ fontSize: '.8rem', color: 'var(--muted)' }}>Las ambulancias aparecerán aquí cuando se despache una emergencia.</span>
+              </p>
+            </div>
           )}
         </section>
       </main>

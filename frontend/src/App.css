@@ -237,23 +237,23 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
 /* ── Ambulance page ────────────────────────────────────────── */
 .ambulance-main {
   width: 100%; max-width: 480px; margin: 0 auto;
-  padding: 14px 14px max(14px, env(safe-area-inset-bottom));
-  display: flex; flex-direction: column; gap: 12px;
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 8px;
   overflow-y: auto; overscroll-behavior: contain;
 }
-.amb-card { padding: 18px; }
-.amb-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 14px; }
-.amb-unit { font-size: 1.5rem; font-weight: 800; letter-spacing: -.04em; color: var(--ink); }
+.amb-card { padding: 13px 15px; }
+.amb-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 10px; }
+.amb-unit { font-size: 1.3rem; font-weight: 800; letter-spacing: -.04em; color: var(--ink); }
 .amb-label { display: block; color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 2px; }
-.amb-detail { display: flex; flex-direction: column; gap: 10px; }
+.amb-detail { display: flex; flex-direction: column; gap: 7px; }
 .amb-detail-row { display: flex; flex-direction: column; }
-.amb-detail-row strong { font-size: .9rem; }
-.amb-eta-row { margin-top: 4px; }
-.eta-value { font-size: 2rem; font-weight: 800; letter-spacing: -.06em; color: var(--teal); }
-.record-area { display: flex; justify-content: center; padding: 16px 0; }
+.amb-detail-row strong { font-size: .88rem; }
+.amb-eta-row { margin-top: 2px; }
+.eta-value { font-size: 1.8rem; font-weight: 800; letter-spacing: -.06em; color: var(--teal); }
+.record-area { display: flex; justify-content: center; padding: 10px 0; }
 .record-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  width: 110px; height: 110px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 90px; height: 90px; border-radius: 50%;
   border: 3px solid var(--teal); background: #e3f6f2;
   color: var(--teal-dark); font-size: .78rem; font-weight: 800;
   cursor: pointer; transition: transform .15s, box-shadow .15s;
@@ -263,7 +263,7 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
   background: #fff0ee; border-color: var(--orange); color: var(--orange);
   animation: pulse-ring 1.4s ease-in-out infinite;
 }
-.record-btn-icon { font-size: 2rem; line-height: 1; }
+.record-btn-icon { font-size: 1.7rem; line-height: 1; }
 @keyframes pulse-ring {
   0%, 100% { box-shadow: 0 0 0 0 rgba(238,134,95,.35); }
   50% { box-shadow: 0 0 0 10px rgba(238,134,95,0); }
@@ -290,7 +290,7 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
   grid-area: detail; display: flex; flex-direction: column; gap: 12px;
   overflow-y: auto; overscroll-behavior: contain;
 }
-.hosp-card { padding: 18px; }
+.hosp-card { padding: 13px 15px; }
 .amb-list-item {
   width: 100%; text-align: left; padding: 10px 12px;
   border: 1px solid var(--line); border-radius: 12px;
@@ -303,7 +303,7 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
 .amb-list-top strong { font-size: .95rem; }
 .amb-condition { margin: 0 0 4px; color: var(--muted); font-size: .78rem; line-height: 1.3; }
 .amb-phase-label { font-size: .68rem; font-weight: 700; color: var(--teal-dark); text-transform: uppercase; letter-spacing: .08em; }
-.quick-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.quick-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .comm-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .comm-list { flex: 1; list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .comm-item { padding: 9px 12px; border-radius: 10px; max-width: 85%; }
@@ -315,15 +315,110 @@ main { padding-top: 62px; padding-bottom: 70px; }.hero-copy { display: flex; ali
 .notify-email-input { width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: .85rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); outline: none; }
 .notify-email-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
 
+/* ── Metrics bar ───────────────────────────────────────────── */
+.metrics-bar {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 4px 0;
+}
+.metric-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 6px;
+  background: #e3f6f2; color: var(--teal-dark);
+  font-size: .68rem;
+}
+.metric-chip strong { font-weight: 800; }
+
+/* ── Landing page ──────────────────────────────────────────── */
+.landing {
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(135deg, #f9fbfb 0%, #eef5f5 100%);
+}
+.landing-nav {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 62px;
+  border-bottom: 1px solid var(--line); background: rgba(255,255,255,.95);
+}
+.landing-nav .brand { font-size: 13px; }
+.landing-nav-btn { width: auto; padding: 9px 16px; }
+.landing-main {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: 1.15fr 1fr;
+  gap: 40px; padding: 32px 48px;
+  max-width: 1160px; margin: 0 auto; width: 100%;
+  align-items: center;
+}
+.landing-left { display: flex; flex-direction: column; gap: 16px; }
+.landing-left .eyebrow { margin: 0; }
+.landing-left h1 {
+  font-size: clamp(1.9rem, 3.2vw, 2.9rem);
+  letter-spacing: -.05em; line-height: .95; margin: 0;
+}
+.landing-tagline-box {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-radius: 13px;
+  background: rgba(255,255,255,.85);
+  border-left: 4px solid var(--teal); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.landing-tagline-mark { font-size: 1.5rem; flex-shrink: 0; }
+.landing-tagline-box p { margin: 0; font-size: .92rem; color: var(--muted); line-height: 1.5; }
+.landing-tagline-box strong { color: var(--ink); font-size: 1rem; }
+.landing-pillars-row { display: flex; flex-direction: column; gap: 7px; }
+.pillar-chip {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 13px; border-radius: 10px;
+  background: rgba(255,255,255,.8); border: 1px solid var(--line);
+}
+.pillar-chip > span { font-size: 1.25rem; flex-shrink: 0; }
+.pillar-chip strong { display: block; font-size: .82rem; }
+.pillar-chip small { display: block; color: var(--muted); font-size: .72rem; }
+.landing-cta-btn { padding: 12px 18px; }
+.landing-disclaimer { margin: 0; font-size: .72rem; color: var(--muted); text-align: center; }
+.landing-right {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 22px; border-radius: 18px;
+  background: rgba(255,255,255,.8); border: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(38,72,84,.06);
+}
+.landing-right .eyebrow { margin: 0; }
+.landing-qr-lead { margin: 0; font-size: .85rem; color: var(--muted); text-align: center; }
+.landing-qrs { display: flex; gap: 14px; }
+.qr-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px; border-radius: 13px;
+  background: white; border: 1px solid var(--line);
+  box-shadow: 0 3px 12px rgba(38,72,84,.06);
+}
+.qr-card img { border-radius: 6px; display: block; }
+.qr-card strong { font-size: .82rem; }
+.qr-card small { font-size: .68rem; color: var(--muted); text-align: center; max-width: 130px; }
+
 @media (max-width: 760px) {
-  .page-nav { display: none; }
-  .hospital-main {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "sidebar" "detail";
+  .landing { height: auto; overflow-y: auto; }
+  .landing-nav { padding: 0 16px; height: 56px; }
+  .landing-main { grid-template-columns: 1fr; padding: 20px 16px 32px; gap: 24px; }
+  .landing-qrs { justify-content: center; }
+}
+
+@media (max-width: 760px) {
+  .screen-tabs ~ .page-nav { display: none; }
+
+  /* Hospital and ambulance: allow natural page scroll instead of nested scroll */
+  .dispatch-shell:has(.hospital-main),
+  .dispatch-shell:has(.ambulance-main) {
+    height: auto;
+    min-height: 100dvh;
     overflow-y: auto;
   }
-  .hospital-sidebar { max-height: 180px; }
-  .hospital-detail { overflow: visible; }
+
+  .hospital-main {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+    padding: 10px;
+    gap: 10px;
+  }
+  .hospital-sidebar { max-height: none; overflow: visible; }
+  .hospital-detail { overflow: visible; height: auto; gap: 10px; }
   .ambulance-main { max-width: 100%; }
 }

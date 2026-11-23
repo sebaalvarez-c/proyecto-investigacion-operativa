@@ -86,6 +86,23 @@ export class EmergenciesService {
     return result;
   }
 
+  getActive() {
+    return Array.from(this.dispatches.entries())
+      .map(([emergencyId, d]) => {
+        const emergency = this.emergencies.findById(emergencyId);
+        if (!emergency || emergency.status === 'ARRIVED') return null;
+        return {
+          emergencyId,
+          ambulanceCode: d.ambulance.code,
+          emergencyDescription: emergency.description,
+          hospitalName: d.hospital.name,
+          etaPickupMinutes: d.pickup.primary.estimatedMinutes,
+          etaTransferMinutes: d.transfer.primary.estimatedMinutes,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }
+
   complete(id: string) {
     const emergency = this.get(id);
     if (!emergency.assignedAmbulanceId) throw new ConflictException('No hay una ambulancia asignada.');
