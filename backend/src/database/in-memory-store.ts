@@ -120,6 +120,9 @@ export class InMemoryStore {
     { id: '10000000-0000-4000-8000-000000000023', name: 'Clínica Universitaria UCEBOL', address: 'Santa Cruz de la Sierra', latitude: -17.7314345, longitude: -63.1695217, availableBeds: 3, hasEmergencyService: true },
     { id: '10000000-0000-4000-8000-000000000024', name: 'Clínica Vida y Esperanza', address: 'Santa Cruz de la Sierra', latitude: -17.7435263, longitude: -63.1499226, availableBeds: 3, hasEmergencyService: true },
     { id: '10000000-0000-4000-8000-000000000025', name: 'Clínica Buena Salud', address: 'Santa Cruz de la Sierra', latitude: -17.7708682, longitude: -63.1249356, availableBeds: 3, hasEmergencyService: true },
+    { id: '10000000-0000-4000-8000-000000000026', name: 'Clínica Foianini', address: 'Santa Cruz de la Sierra', latitude: -17.7778, longitude: -63.1577, availableBeds: 10, hasEmergencyService: true },
+    { id: '10000000-0000-4000-8000-000000000027', name: 'Hospital COSSMIL Santa Cruz', address: 'Santa Cruz de la Sierra', latitude: -17.7607, longitude: -63.2038, availableBeds: 6, hasEmergencyService: true },
+    { id: '10000000-0000-4000-8000-000000000028', name: 'Hospital Obrero CNS No. 2', address: 'Santa Cruz de la Sierra', latitude: -17.7866, longitude: -63.1618, availableBeds: 8, hasEmergencyService: true },
   ];
 
   readonly emergencies: EmergencyRecord[] = [];

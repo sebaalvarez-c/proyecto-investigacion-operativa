@@ -40,7 +40,7 @@ export function LandingPage() {
               <span className="stat-pill-label">ambulancias<br/>disponibles</span>
             </div>
             <div className="stat-pill">
-              <span className="stat-pill-num">5</span>
+              <span className="stat-pill-num">28</span>
               <span className="stat-pill-label">hospitales<br/>conectados</span>
             </div>
             <div className="stat-pill">
