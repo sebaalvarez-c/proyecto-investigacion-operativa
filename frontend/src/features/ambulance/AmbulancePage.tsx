@@ -31,6 +31,21 @@ export function AmbulancePage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Request mic permission on mount so it's ready before the demo
+  useEffect(() => {
+    navigator.permissions
+      .query({ name: 'microphone' as PermissionName })
+      .then((result) => {
+        if (result.state === 'prompt') {
+          navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then((stream) => stream.getTracks().forEach((t) => t.stop()))
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!activeDispatch) {
       dispatchSeenRef.current = null;
