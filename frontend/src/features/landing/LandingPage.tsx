@@ -1,12 +1,31 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAvailableCount } from '../../services/api';
+import { getAvailableCount, getHospitals } from '../../services/api';
+
+const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+
+async function getTotalAmbulances(): Promise<number> {
+  const res = await fetch(`${API_BASE}/ambulances`);
+  const data = await res.json() as { id: string }[];
+  return data.length;
+}
 
 export function LandingPage() {
   const [available, setAvailable] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
+  const [hospitalCount, setHospitalCount] = useState<number | null>(null);
 
   useEffect(() => {
-    const load = () => getAvailableCount().then(setAvailable).catch(() => {});
+    const load = async () => {
+      const [avail, tot, hospitals] = await Promise.allSettled([
+        getAvailableCount(),
+        getTotalAmbulances(),
+        getHospitals().then((h) => h.length),
+      ]);
+      if (avail.status === 'fulfilled') setAvailable(avail.value);
+      if (tot.status === 'fulfilled') setTotal(tot.value);
+      if (hospitals.status === 'fulfilled') setHospitalCount(hospitals.value);
+    };
     void load();
     const id = setInterval(() => void load(), 10_000);
     return () => clearInterval(id);
@@ -36,11 +55,14 @@ export function LandingPage() {
 
           <div className="landing-live-stats">
             <div className={`stat-pill${available !== null && available > 0 ? ' stat-pill--green' : ''}`}>
-              <span className="stat-pill-num">{available ?? '—'}<small style={{fontSize:'0.5em',opacity:0.7}}>/10</small></span>
+              <span className="stat-pill-num">
+                {available ?? '—'}
+                <small style={{fontSize:'0.5em',opacity:0.7}}>/{total ?? '—'}</small>
+              </span>
               <span className="stat-pill-label">ambulancias<br/>disponibles</span>
             </div>
             <div className="stat-pill">
-              <span className="stat-pill-num">28</span>
+              <span className="stat-pill-num">{hospitalCount ?? '—'}</span>
               <span className="stat-pill-label">hospitales<br/>conectados</span>
             </div>
             <div className="stat-pill">
