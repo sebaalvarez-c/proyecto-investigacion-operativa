@@ -59,10 +59,22 @@ export function DispatchPage() {
     if (!navigator.geolocation) { setLocationMode('error'); return; }
     setLocationMode('loading');
     const request = ++locationRequest.current;
-    navigator.geolocation.getCurrentPosition((position) => {
-      if (locationRequest.current === request) updateLocation(locationFromGeolocation(position), 'current');
-    }, () => { if (locationRequest.current === request) setLocationMode('error'); },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (locationRequest.current === request) updateLocation(locationFromGeolocation(position), 'current');
+      },
+      () => {
+        // High-accuracy failed — retry once with low accuracy (works on WiFi/IP)
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (locationRequest.current === request) updateLocation(locationFromGeolocation(position), 'current');
+          },
+          () => { if (locationRequest.current === request) setLocationMode('error'); },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+        );
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 },
+    );
   }
   async function handleEmergency(description: string) {
     setEditing(false);
